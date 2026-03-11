@@ -1,6 +1,10 @@
 FROM docker.io/denoland/deno:debian-2.7.5
 
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+RUN <<EOF
+apt-get update
+apt-get install -y --no-install-recommends ffmpeg
+rm -rf /var/lib/apt/lists/*
+EOF
 
 WORKDIR /app
 
