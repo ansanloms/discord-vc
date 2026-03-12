@@ -136,11 +136,18 @@ export class DiscordBot {
           this.currentConnection = null;
           msg.reply("Left VC").catch((e) => log.warn("failed to reply:", e));
         }
+        return;
       }
 
       // !ping — 疎通確認。
       if (msg.content === "!ping") {
         msg.reply("pong").catch((e) => log.warn("failed to reply:", e));
+        return;
+      }
+
+      // VC チャットのテキストを LLM に渡して音声で返答する。
+      if (msg.channelId === this.config.channelId) {
+        this.onTextMessage(msg.content, msg.author.tag);
       }
     });
   }
@@ -221,6 +228,27 @@ export class DiscordBot {
         // 既に destroyed の場合は無視する。
       }
       this.currentConnection = null;
+    }
+  }
+
+  /**
+   * VC チャットのテキストを LLM → TTS パイプラインに通す。
+   */
+  private async onTextMessage(
+    content: string,
+    authorTag: string,
+  ): Promise<void> {
+    try {
+      log.info(`VC text from ${authorTag}: ${content}`);
+      const reply = await this.llm.chat(content);
+      if (!reply) {
+        return;
+      }
+
+      log.info(`reply: ${reply}`);
+      await this.voicePlayer.speak(reply);
+    } catch (e: unknown) {
+      log.error("text pipeline error:", e);
     }
   }
 
