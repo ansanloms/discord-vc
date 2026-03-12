@@ -16,7 +16,16 @@
  */
 
 import { Buffer } from "node:buffer";
-import { Client, GatewayIntentBits } from "discord.js";
+import {
+  ChannelType,
+  Client,
+  GatewayIntentBits,
+  MessageFlags,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+} from "discord.js";
+import type { ChatInputCommandInteraction } from "discord.js";
 import {
   EndBehaviorType,
   entersState,
@@ -32,6 +41,49 @@ import type { Config } from "./config.ts";
 import type { SpeechToText } from "./stt/types.ts";
 import type { LanguageModel } from "./llm/types.ts";
 import type { VoicePlayer } from "./audio/player.ts";
+
+/**
+ * /aivc スラッシュコマンドの定義。
+ */
+const vcCommand = new SlashCommandBuilder()
+  .setName("aivc")
+  .setDescription("ボイスチャンネル操作")
+  .addSubcommand((sub) =>
+    sub
+      .setName("join")
+      .setDescription("ボイスチャンネルに参加する")
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("leave")
+      .setDescription("ボイスチャンネルから切断する")
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("ping")
+      .setDescription("疎通確認")
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("message")
+      .setDescription("テキストを LLM に送信し音声で返答する")
+      .addStringOption((opt) =>
+        opt
+          .setName("text")
+          .setDescription("送信するメッセージ")
+          .setRequired(true)
+      )
+  )
+  .addSubcommandGroup((group) =>
+    group
+      .setName("clear")
+      .setDescription("各種データをクリアする")
+      .addSubcommand((sub) =>
+        sub
+          .setName("history")
+          .setDescription("LLM の会話履歴をクリアする")
+      )
+  );
 
 /**
  * 音声パイプラインのしきい値設定。
@@ -79,6 +131,11 @@ export class DiscordBot {
   private currentConnection: VoiceConnection | null = null;
 
   /**
+   * 現在参加中のボイスチャンネル ID。未接続時は null。
+   */
+  private currentChannelId: string | null = null;
+
+  /**
    * 共有の Opus デコーダインスタンス。
    * 注意: opusscript はインスタンスごとにコーデック状態を持つため、
    * 複数ユーザーが同時に発話すると音声にアーティファクトが生じうる。
@@ -108,8 +165,6 @@ export class DiscordBot {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
       ],
     });
     this.setupHandlers();
@@ -125,37 +180,137 @@ export class DiscordBot {
       log.error("discord client error:", err);
     });
 
-    this.client.on("messageCreate", (msg) => {
-      if (msg.author.bot) return;
-
-      // !leave — ボイスチャンネルから切断する。
-      if (msg.content === "!leave") {
-        const conn = getVoiceConnection(this.config.guildId);
-        if (conn) {
-          conn.destroy();
-          this.currentConnection = null;
-          msg.reply("Left VC").catch((e) => log.warn("failed to reply:", e));
-        }
+    this.client.on("interactionCreate", (interaction) => {
+      if (!interaction.isChatInputCommand()) {
+        return;
+      }
+      if (interaction.commandName !== vcCommand.name) {
         return;
       }
 
-      // !ping — 疎通確認。
-      if (msg.content === "!ping") {
-        msg.reply("pong").catch((e) => log.warn("failed to reply:", e));
-        return;
-      }
-
-      // VC チャットのテキストを LLM に渡して音声で返答する。
-      if (msg.channelId === this.config.channelId) {
-        this.onTextMessage(msg.content, msg.author.tag);
-      }
+      this.handleVcCommand(interaction).catch((e) =>
+        log.error("slash command error:", e)
+      );
     });
   }
 
   /**
-   * Discord クライアントの準備完了時に呼ばれる。VC に参加する。
-   * ギルドが見つからない、または VC 参加に失敗した場合は例外を投げる。
-   * 呼び出し元（start()）で catch し、リトライ判断に使う。
+   * /vc サブコマンドのディスパッチ。
+   */
+  private async handleVcCommand(
+    interaction: ChatInputCommandInteraction,
+  ): Promise<void> {
+    const group = interaction.options.getSubcommandGroup();
+    const sub = interaction.options.getSubcommand();
+    const isVoiceChannel = interaction.channel?.type === ChannelType.GuildVoice;
+
+    // /vc clear <type>
+    if (group === "clear") {
+      switch (sub) {
+        case "history": {
+          this.llm.clearHistory();
+          await interaction.reply("会話履歴をクリアした");
+          return;
+        }
+      }
+      return;
+    }
+
+    switch (sub) {
+      case "join": {
+        if (!isVoiceChannel) {
+          await interaction.reply({
+            content: "VC のテキストチャットから実行してくれ",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        await interaction.deferReply();
+        await this.joinChannel(interaction.channelId);
+        await interaction.editReply("Joined VC");
+        return;
+      }
+
+      case "leave": {
+        if (
+          !isVoiceChannel || interaction.channelId !== this.currentChannelId
+        ) {
+          await interaction.reply({
+            content: "参加中の VC のテキストチャットから実行してくれ",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const conn = getVoiceConnection(this.config.guildId);
+        if (conn) {
+          conn.destroy();
+          this.currentConnection = null;
+          this.currentChannelId = null;
+        }
+        await interaction.reply("Left VC");
+        return;
+      }
+
+      case "ping": {
+        if (
+          !isVoiceChannel || interaction.channelId !== this.currentChannelId
+        ) {
+          await interaction.reply({
+            content: "参加中の VC のテキストチャットから実行してくれ",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        await interaction.reply("pong");
+        return;
+      }
+
+      case "message": {
+        if (
+          !isVoiceChannel || interaction.channelId !== this.currentChannelId
+        ) {
+          await interaction.reply({
+            content: "参加中の VC のテキストチャットから実行してくれ",
+            flags: MessageFlags.Ephemeral,
+          });
+          return;
+        }
+        const text = interaction.options.getString("text", true);
+        await interaction.deferReply();
+        await this.onTextMessage(text, interaction.user.tag, interaction);
+        return;
+      }
+    }
+  }
+
+  /**
+   * テキストメッセージを LLM → TTS パイプラインに通す。
+   */
+  private async onTextMessage(
+    content: string,
+    authorTag: string,
+    interaction: ChatInputCommandInteraction,
+  ): Promise<void> {
+    try {
+      log.info(`text from ${authorTag}: ${content}`);
+      const reply = await this.llm.chat(content);
+      if (!reply) {
+        await interaction.editReply("（返答なし）");
+        return;
+      }
+
+      log.info(`reply: ${reply}`);
+      await interaction.editReply(reply);
+      await this.voicePlayer.speak(reply);
+    } catch (e: unknown) {
+      log.error("text pipeline error:", e);
+      await interaction.editReply("エラーが発生した").catch(() => {});
+    }
+  }
+
+  /**
+   * Discord クライアントの準備完了時に呼ばれる。
+   * スラッシュコマンドをギルドに登録し、バックエンド情報を出力する。
    */
   private async onReady(): Promise<void> {
     log.info(`logged in as ${this.client.user?.tag}`);
@@ -173,32 +328,51 @@ export class DiscordBot {
       `voice thresholds: minSpeechMs=${this.config.voice.minSpeechMs}, speechRms=${this.config.voice.speechRms}, interruptRms=${this.config.voice.interruptRms}`,
     );
 
+    // スラッシュコマンドをギルドに登録する。
+    const rest = new REST().setToken(this.config.discordToken);
+    const clientId = this.client.user!.id;
+    await rest.put(
+      Routes.applicationGuildCommands(clientId, this.config.guildId),
+      { body: [vcCommand.toJSON()] },
+    );
+    log.info("slash commands registered");
+  }
+
+  /**
+   * 指定されたボイスチャンネルに参加する。
+   * 既に別の VC に参加中の場合は切断してから参加する。
+   */
+  private async joinChannel(channelId: string): Promise<void> {
+    // 既存の接続を破棄する。
+    if (this.currentConnection) {
+      this.currentConnection.destroy();
+      this.currentConnection = null;
+      this.currentChannelId = null;
+    }
+
     const guild = this.client.guilds.cache.get(this.config.guildId);
     if (!guild) {
-      throw new Error(
-        `guild ${this.config.guildId} not found in cache`,
-      );
+      throw new Error(`guild ${this.config.guildId} not found in cache`);
     }
 
     const connection = joinVoiceChannel({
-      channelId: this.config.channelId,
+      channelId,
       guildId: this.config.guildId,
       adapterCreator: guild.voiceAdapterCreator,
       selfDeaf: false,
     });
     this.currentConnection = connection;
+    this.currentChannelId = channelId;
 
     connection.on("stateChange", (_old, newState) => {
       log.debug(`voice state: ${newState.status}`);
     });
 
-    // VC 接続が Ready になるまで待機する。
     await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
-    log.info("voice connection ready");
+    log.info(`voice connection ready (channel: ${channelId})`);
     connection.subscribe(this.voicePlayer.discordPlayer);
     this.setupVoiceReceiver(connection);
 
-    // 切断時に自動再接続を試みる。
     connection.on(VoiceConnectionStatus.Disconnected, () => {
       this.handleDisconnect(connection);
     });
@@ -228,27 +402,7 @@ export class DiscordBot {
         // 既に destroyed の場合は無視する。
       }
       this.currentConnection = null;
-    }
-  }
-
-  /**
-   * VC チャットのテキストを LLM → TTS パイプラインに通す。
-   */
-  private async onTextMessage(
-    content: string,
-    authorTag: string,
-  ): Promise<void> {
-    try {
-      log.info(`VC text from ${authorTag}: ${content}`);
-      const reply = await this.llm.chat(content);
-      if (!reply) {
-        return;
-      }
-
-      log.info(`reply: ${reply}`);
-      await this.voicePlayer.speak(reply);
-    } catch (e: unknown) {
-      log.error("text pipeline error:", e);
+      this.currentChannelId = null;
     }
   }
 
@@ -327,7 +481,9 @@ export class DiscordBot {
     activeUsers.delete(userId);
 
     try {
-      if (pcmChunks.length === 0) return;
+      if (pcmChunks.length === 0) {
+        return;
+      }
 
       const pcm = Buffer.concat(pcmChunks);
 
@@ -372,7 +528,9 @@ export class DiscordBot {
 
       log.info(`transcript: ${text}`);
       const reply = await this.llm.chat(text);
-      if (!reply) return;
+      if (!reply) {
+        return;
+      }
 
       log.info(`reply: ${reply}`);
       await this.voicePlayer.speak(reply);
@@ -382,14 +540,12 @@ export class DiscordBot {
   }
 
   /**
-   * Discord に接続し、VC に参加するまで待機する。
-   * clientReady 後の VC 参加に失敗した場合はクライアントを破棄して例外を再送する。
-   * 呼び出し元でリトライ可能。
+   * Discord に接続し、スラッシュコマンドを登録する。
+   * VC への参加は /vc join コマンドで行う。
    */
   async start(): Promise<void> {
     log.info("logging in...");
 
-    // clientReady イベントを Promise 化して待機する。
     const readyPromise = new Promise<void>((resolve, reject) => {
       this.client.once("clientReady", () => {
         this.onReady().then(resolve, reject);
@@ -401,7 +557,6 @@ export class DiscordBot {
     try {
       await readyPromise;
     } catch (err) {
-      // VC 参加に失敗した場合はクライアントを破棄して呼び出し元に伝播させる。
       log.error("onReady failed, destroying client:", err);
       this.client.destroy();
       throw err;
@@ -414,7 +569,13 @@ export class DiscordBot {
   shutdown(): void {
     log.info("shutting down...");
     if (this.currentConnection) {
-      this.currentConnection.destroy();
+      try {
+        this.currentConnection.destroy();
+      } catch {
+        // 既に destroyed の場合は無視する。
+      }
+      this.currentConnection = null;
+      this.currentChannelId = null;
       log.info("disconnected from voice channel");
     }
     this.client.destroy();

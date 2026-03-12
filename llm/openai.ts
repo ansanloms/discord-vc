@@ -98,4 +98,12 @@ export class OpenAiLlm implements LanguageModel {
       return "";
     }
   }
+
+  /**
+   * @inheritdoc
+   */
+  clearHistory(): void {
+    this.history.length = 0;
+    log.info("conversation history cleared");
+  }
 }

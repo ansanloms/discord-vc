@@ -1,7 +1,7 @@
 /**
  * 環境変数からアプリケーション設定を読み込む。
  *
- * 必須変数: DISCORD_TOKEN, GUILD_ID, CHANNEL_ID。
+ * 必須変数: DISCORD_TOKEN, GUILD_ID。
  * その他はデフォルト値が設定されている。
  *
  * STT/TTS/LLM の設定は判別共用体で表現し、
@@ -43,11 +43,6 @@ export interface Config {
   guildId: string;
 
   /**
-   * 参加するボイスチャンネルの ID。
-   */
-  channelId: string;
-
-  /**
    * 音声パイプラインのしきい値設定。
    */
   voice: VoiceThresholds;
@@ -83,15 +78,9 @@ export function loadConfig(): Config {
     throw new Error("必須環境変数が未設定: GUILD_ID");
   }
 
-  const channelId = Deno.env.get("CHANNEL_ID");
-  if (!channelId) {
-    throw new Error("必須環境変数が未設定: CHANNEL_ID");
-  }
-
   return {
     discordToken,
     guildId,
-    channelId,
     voice: {
       minSpeechMs: Number(Deno.env.get("MIN_SPEECH_MS") ?? "500"),
       speechRms: Number(Deno.env.get("SPEECH_RMS") ?? "200"),

@@ -52,7 +52,6 @@ main.ts        # エントリポイント — 依存の組み立て
 | -------------------- | ---- | ---------- | --------------------------------------- |
 | `DISCORD_TOKEN`      | ✓    | —          | Discord bot トークン                    |
 | `GUILD_ID`           | ✓    | —          | ギルド（サーバー）ID                    |
-| `CHANNEL_ID`         | ✓    | —          | ボイスチャンネル ID                     |
 | `WHISPER_URL`        |      | —          | whisper.cpp STT サーバー URL            |
 | `OPENAI_TTS_URL`     |      | —          | OpenAI 互換 TTS サーバー URL            |
 | `OPENAI_TTS_API_KEY` |      | —          | TTS サーバーの API キー                 |

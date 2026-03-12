@@ -29,7 +29,6 @@ function withEnv(
 const REQUIRED_VARS = {
   DISCORD_TOKEN: "test-token",
   GUILD_ID: "123456",
-  CHANNEL_ID: "789012",
 };
 
 Deno.test("loadConfig: 必須変数がすべて設定されている場合に正しい値を返すこと", () => {
@@ -54,7 +53,6 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
       const config = loadConfig();
       assertEquals(config.discordToken, "test-token");
       assertEquals(config.guildId, "123456");
-      assertEquals(config.channelId, "789012");
       assertEquals(config.voice, {
         minSpeechMs: 300,
         speechRms: 150,

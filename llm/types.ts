@@ -18,4 +18,9 @@ export interface LanguageModel {
    * @returns モデルの返答。失敗時は空文字列。
    */
   chat(message: string): Promise<string>;
+
+  /**
+   * 会話履歴をクリアする。
+   */
+  clearHistory(): void;
 }
