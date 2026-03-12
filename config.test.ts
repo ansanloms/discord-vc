@@ -48,6 +48,7 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
       MIN_SPEECH_MS: "300",
       SPEECH_RMS: "150",
       INTERRUPT_RMS: "600",
+      AUTO_LEAVE_MS: "300000",
     },
     () => {
       const config = loadConfig();
@@ -57,6 +58,7 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
         minSpeechMs: 300,
         speechRms: 150,
         interruptRms: 600,
+        autoLeaveMs: 300000,
       });
       assertEquals(config.stt, {
         type: "whisper",
@@ -101,6 +103,7 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
     "MIN_SPEECH_MS",
     "SPEECH_RMS",
     "INTERRUPT_RMS",
+    "AUTO_LEAVE_MS",
   ];
   const saved: Record<string, string | undefined> = {};
   for (const key of optionalKeys) {
@@ -115,6 +118,7 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
         minSpeechMs: 500,
         speechRms: 200,
         interruptRms: 500,
+        autoLeaveMs: 600000,
       });
       assertEquals(config.stt, {
         type: "whisper",

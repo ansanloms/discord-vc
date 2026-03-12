@@ -85,6 +85,7 @@ export function loadConfig(): Config {
       minSpeechMs: Number(Deno.env.get("MIN_SPEECH_MS") ?? "500"),
       speechRms: Number(Deno.env.get("SPEECH_RMS") ?? "200"),
       interruptRms: Number(Deno.env.get("INTERRUPT_RMS") ?? "500"),
+      autoLeaveMs: Number(Deno.env.get("AUTO_LEAVE_MS") ?? "600000"),
     },
     stt: {
       type: "whisper",

@@ -37,12 +37,23 @@ See [.env.example](.env.example) for all available environment variables.
 deno task start
 ```
 
-### Bot Commands
+### Slash Commands
 
-| Command  | Description                           |
-| -------- | ------------------------------------- |
-| `!ping`  | Health check (replies with "pong")    |
-| `!leave` | Disconnect the bot from voice channel |
+All commands use the `/aivc` prefix and are registered as guild commands on bot startup.
+
+| Command                | Description                                    |
+| ---------------------- | ---------------------------------------------- |
+| `/aivc join`           | Join the voice channel (run from VC text chat) |
+| `/aivc leave`          | Disconnect from the voice channel              |
+| `/aivc ping`           | Health check (replies with "pong")             |
+| `/aivc message <text>` | Send text to LLM and speak the response        |
+| `/aivc clear history`  | Clear LLM conversation history                 |
+
+Commands that operate on the current voice session (`leave`, `ping`, `message`) must be run from the text chat of the VC the bot is in.
+
+### Auto Leave
+
+When all members leave the voice channel, the bot will automatically disconnect after a configurable timeout (default: 10 minutes). Set `AUTO_LEAVE_MS=-1` to disable.
 
 ## Development
 
@@ -75,22 +86,22 @@ The `Config` type uses discriminated unions (`{ type, config }`) for each backen
 
 ## Environment Variables
 
-| Variable             | Required | Default | Description                            |
-| -------------------- | -------- | ------- | -------------------------------------- |
-| `DISCORD_TOKEN`      | Yes      | —       | Discord bot token                      |
-| `GUILD_ID`           | Yes      | —       | Guild (server) ID                      |
-| `CHANNEL_ID`         | Yes      | —       | Voice channel ID                       |
-| `WHISPER_URL`        |          | —       | whisper.cpp STT server URL             |
-| `OPENAI_TTS_URL`     |          | —       | OpenAI-compatible TTS server URL       |
-| `OPENAI_TTS_API_KEY` |          | —       | TTS server API key                     |
-| `OPENAI_TTS_MODEL`   |          | —       | TTS model name                         |
-| `OPENAI_TTS_SPEAKER` |          | `1`     | TTS speaker identifier                 |
-| `OPENAI_TTS_SPEED`   |          | `1`     | TTS playback speed                     |
-| `OPENAI_LLM_URL`     |          | —       | OpenAI-compatible LLM server URL       |
-| `OPENAI_LLM_API_KEY` |          | —       | LLM server API key                     |
-| `OPENAI_LLM_MODEL`   |          | —       | LLM model name                         |
-| `SYSTEM_PROMPT`      |          | —       | System prompt for LLM (omit to skip)   |
-| `MIN_SPEECH_MS`      |          | `500`   | Min speech duration (ms) sent to STT   |
-| `SPEECH_RMS`         |          | `200`   | Min RMS amplitude to count as speech   |
-| `INTERRUPT_RMS`      |          | `500`   | Min RMS amplitude to interrupt AI      |
-| `LOG_LEVEL`          |          | `INFO`  | Log level: DEBUG / INFO / WARN / ERROR |
+| Variable             | Required | Default  | Description                            |
+| -------------------- | -------- | -------- | -------------------------------------- |
+| `DISCORD_TOKEN`      | Yes      | —        | Discord bot token                      |
+| `GUILD_ID`           | Yes      | —        | Guild (server) ID                      |
+| `WHISPER_URL`        |          | —        | whisper.cpp STT server URL             |
+| `OPENAI_TTS_URL`     |          | —        | OpenAI-compatible TTS server URL       |
+| `OPENAI_TTS_API_KEY` |          | —        | TTS server API key                     |
+| `OPENAI_TTS_MODEL`   |          | —        | TTS model name                         |
+| `OPENAI_TTS_SPEAKER` |          | `1`      | TTS speaker identifier                 |
+| `OPENAI_TTS_SPEED`   |          | `1`      | TTS playback speed                     |
+| `OPENAI_LLM_URL`     |          | —        | OpenAI-compatible LLM server URL       |
+| `OPENAI_LLM_API_KEY` |          | —        | LLM server API key                     |
+| `OPENAI_LLM_MODEL`   |          | —        | LLM model name                         |
+| `SYSTEM_PROMPT`      |          | —        | System prompt for LLM (omit to skip)   |
+| `MIN_SPEECH_MS`      |          | `500`    | Min speech duration (ms) sent to STT   |
+| `SPEECH_RMS`         |          | `200`    | Min RMS amplitude to count as speech   |
+| `INTERRUPT_RMS`      |          | `500`    | Min RMS amplitude to interrupt AI      |
+| `AUTO_LEAVE_MS`      |          | `600000` | Auto-leave timeout (ms). -1 to disable |
+| `LOG_LEVEL`          |          | `INFO`   | Log level: DEBUG / INFO / WARN / ERROR |

@@ -106,6 +106,12 @@ export interface VoiceThresholds {
    * speechRms より高く設定することで、小さな雑音では中断されなくなる。
    */
   interruptRms: number;
+
+  /**
+   * VC にボット以外のメンバーがいなくなってから自動退出するまでの時間（ミリ秒）。
+   * -1 の場合は自動退出しない。
+   */
+  autoLeaveMs: number;
 }
 
 const log = createLogger("bot");
@@ -134,6 +140,11 @@ export class DiscordBot {
    * 現在参加中のボイスチャンネル ID。未接続時は null。
    */
   private currentChannelId: string | null = null;
+
+  /**
+   * 自動退出タイマーの ID。タイマー未設定時は null。
+   */
+  private autoLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * 共有の Opus デコーダインスタンス。
@@ -192,6 +203,68 @@ export class DiscordBot {
         log.error("slash command error:", e)
       );
     });
+
+    // VC メンバーの入退室を監視し、誰もいなくなったら自動退出する。
+    this.client.on("voiceStateUpdate", (_oldState, newState) => {
+      if (!this.currentChannelId) return;
+      if (
+        newState.channelId !== this.currentChannelId &&
+        _oldState.channelId !== this.currentChannelId
+      ) {
+        return;
+      }
+      this.checkAutoLeave();
+    });
+  }
+
+  /**
+   * 現在の VC にボット以外のメンバーがいるか確認し、
+   * いなければ自動退出タイマーを開始する。
+   * メンバーが戻ってきた場合はタイマーをキャンセルする。
+   */
+  private checkAutoLeave(): void {
+    if (!this.currentChannelId || this.config.voice.autoLeaveMs < 0) return;
+
+    const channel = this.client.channels.cache.get(this.currentChannelId);
+    if (!channel || channel.type !== ChannelType.GuildVoice) return;
+
+    // ボット自身を除いたメンバー数。
+    const memberCount = channel.members.filter((m) => !m.user.bot).size;
+
+    if (memberCount === 0) {
+      // 既にタイマーが動いていれば何もしない。
+      if (this.autoLeaveTimer) return;
+
+      log.info(
+        `no members in VC, auto-leave in ${
+          this.config.voice.autoLeaveMs / 1000
+        }s`,
+      );
+      this.autoLeaveTimer = setTimeout(() => {
+        this.autoLeaveTimer = null;
+        // 再度確認してまだ誰もいなければ退出する。
+        const ch = this.client.channels.cache.get(this.currentChannelId!);
+        if (
+          ch && ch.type === ChannelType.GuildVoice &&
+          ch.members.filter((m) => !m.user.bot).size === 0
+        ) {
+          log.info("auto-leaving VC (no members)");
+          const conn = getVoiceConnection(this.config.guildId);
+          if (conn) {
+            conn.destroy();
+            this.currentConnection = null;
+            this.currentChannelId = null;
+          }
+        }
+      }, this.config.voice.autoLeaveMs);
+    } else {
+      // メンバーがいるのでタイマーをキャンセルする。
+      if (this.autoLeaveTimer) {
+        clearTimeout(this.autoLeaveTimer);
+        this.autoLeaveTimer = null;
+        log.info("auto-leave cancelled (member joined)");
+      }
+    }
   }
 
   /**
@@ -568,6 +641,10 @@ export class DiscordBot {
    */
   shutdown(): void {
     log.info("shutting down...");
+    if (this.autoLeaveTimer) {
+      clearTimeout(this.autoLeaveTimer);
+      this.autoLeaveTimer = null;
+    }
     if (this.currentConnection) {
       try {
         this.currentConnection.destroy();
