@@ -12,6 +12,7 @@ import type { WhisperSttConfig } from "./stt/whisper.ts";
 import type { OpenAiTtsConfig } from "./tts/openai.ts";
 import type { OpenAiLlmConfig } from "./llm/openai/mod.ts";
 import type { AnthropicLlmConfig } from "./llm/anthropic/mod.ts";
+import type { OllamaLlmConfig } from "./llm/ollama/mod.ts";
 import type { VoiceThresholds } from "./bot.ts";
 
 /**
@@ -29,7 +30,8 @@ export type TtsConfig = { type: "openai"; config: OpenAiTtsConfig };
  */
 export type LlmConfig =
   | { type: "openai"; config: OpenAiLlmConfig }
-  | { type: "anthropic"; config: AnthropicLlmConfig };
+  | { type: "anthropic"; config: AnthropicLlmConfig }
+  | { type: "ollama"; config: OllamaLlmConfig };
 
 /**
  * バリデーション済みのアプリケーション設定。
@@ -126,6 +128,18 @@ function buildLlmConfig(): LlmConfig {
           apiKey: Deno.env.get("OPENAI_LLM_API_KEY"),
           model: Deno.env.get("OPENAI_LLM_MODEL") ?? "",
           systemPrompt: loadSystemPrompt(),
+        },
+      };
+    case "ollama":
+      return {
+        type: "ollama",
+        config: {
+          host: Deno.env.get("OLLAMA_HOST"),
+          model: Deno.env.get("OLLAMA_MODEL") ?? "",
+          systemPrompt: loadSystemPrompt(),
+          maxToolRounds: Number(
+            Deno.env.get("OLLAMA_MAX_TOOL_ROUNDS") ?? "5",
+          ),
         },
       };
     default:

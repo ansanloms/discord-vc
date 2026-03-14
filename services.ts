@@ -15,6 +15,7 @@ import { WhisperStt } from "./stt/whisper.ts";
 import { OpenAiTts } from "./tts/openai.ts";
 import { OpenAiLlm } from "./llm/openai/mod.ts";
 import { AnthropicLlm } from "./llm/anthropic/mod.ts";
+import { OllamaLlm } from "./llm/ollama/mod.ts";
 import { VoicePlayer } from "./audio/player.ts";
 
 /**
@@ -53,6 +54,8 @@ function createLlm(config: Config["llm"]): LanguageModel {
       return new OpenAiLlm(config.config);
     case "anthropic":
       return new AnthropicLlm(config.config);
+    case "ollama":
+      return new OllamaLlm(config.config);
   }
 }
 
