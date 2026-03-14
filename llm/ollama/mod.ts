@@ -120,7 +120,7 @@ export class OllamaLlm implements LanguageModel {
    */
   chat(userMessage: string): Promise<string> {
     const prev = this.chatMutex;
-    let resolve: () => void;
+    let resolve!: () => void;
     this.chatMutex = new Promise<void>((r) => {
       resolve = r;
     });
@@ -141,11 +141,12 @@ export class OllamaLlm implements LanguageModel {
     }
 
     try {
-      for (let round = 0; round <= this.maxToolRounds; round++) {
-        const system = this.systemPromptTemplate
-          ? replaceTemplateVariables(this.systemPromptTemplate, this.context)
-          : undefined;
+      // system prompt はラウンドトリップ間で不変なのでループ外で構築する。
+      const system = this.systemPromptTemplate
+        ? replaceTemplateVariables(this.systemPromptTemplate, this.context)
+        : undefined;
 
+      for (let round = 0; round <= this.maxToolRounds; round++) {
         const messages: Message[] = [
           ...(system ? [{ role: "system" as const, content: system }] : []),
           ...this.history,

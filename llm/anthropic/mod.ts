@@ -152,7 +152,7 @@ export class AnthropicLlm implements LanguageModel {
    */
   chat(userMessage: string): Promise<string> {
     const prev = this.chatMutex;
-    let resolve: () => void;
+    let resolve!: () => void;
     this.chatMutex = new Promise<void>((r) => {
       resolve = r;
     });

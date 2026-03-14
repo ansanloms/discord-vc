@@ -805,6 +805,11 @@ export class DiscordBot {
       clearTimeout(this.autoLeaveTimer);
       this.autoLeaveTimer = null;
     }
+    // デバウンスタイマーをすべてキャンセルする。
+    for (const entry of this.speechDebounce.values()) {
+      clearTimeout(entry.timer);
+    }
+    this.speechDebounce.clear();
     if (this.currentConnection) {
       try {
         this.currentConnection.destroy();
