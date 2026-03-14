@@ -20,6 +20,7 @@ export const tool: Tool = {
       limit: {
         type: "number",
         description: "取得するメンバーの最大数。デフォルトは 100。",
+        minimum: 1,
         maximum: 1000,
       },
     },

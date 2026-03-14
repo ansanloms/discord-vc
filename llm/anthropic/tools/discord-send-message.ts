@@ -24,6 +24,7 @@ export const tool: Tool = {
       content: {
         type: "string",
         description: "送信するメッセージ内容。",
+        maxLength: 2000,
       },
     },
     required: ["channelId", "content"],

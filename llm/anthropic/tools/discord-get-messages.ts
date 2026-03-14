@@ -71,6 +71,7 @@ export const tool: Tool = {
       limit: {
         type: "number",
         description: "取得するメッセージの最大数。デフォルトは 20。",
+        minimum: 1,
         maximum: 100,
       },
     },
