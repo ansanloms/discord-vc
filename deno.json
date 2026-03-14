@@ -4,6 +4,8 @@
     "proseWrap": "preserve"
   },
   "imports": {
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@latest",
+    "@anthropic-ai/sdk/": "npm:/@anthropic-ai/sdk@latest/",
     "@discordjs/voice": "npm:@discordjs/voice@0.19.1",
     "@openai/openai": "jsr:@openai/openai@^6.26.0",
     "@snazzah/davey": "npm:@snazzah/davey@^0.1.10",
