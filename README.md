@@ -10,7 +10,7 @@ Discord Voice Channel
   -> PCM buffer
   -> Noise / length filter
   -> STT (whisper.cpp)
-  -> LLM (OpenAI-compatible API)
+  -> LLM (OpenAI-compatible API or Anthropic Claude API)
   -> TTS (OpenAI-compatible API)
   -> Audio playback (@discordjs/voice)
 ```
@@ -20,7 +20,9 @@ Discord Voice Channel
 - [Deno](https://deno.land/) v2+
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) server for STT
 - OpenAI-compatible TTS server (e.g. [voicevox-openai-tts](https://github.com/nichiki/voicevox-openai-tts))
-- OpenAI-compatible LLM server (e.g. Ollama, OpenClaw)
+- One of the following LLM backends:
+  - OpenAI-compatible LLM server (e.g. Ollama, OpenClaw)
+  - [Anthropic API](https://docs.anthropic.com/) key (for Claude models with tool use support)
 
 ## Setup
 
@@ -70,7 +72,7 @@ deno task test            # Run tests
 audio/         PCM/WAV codec utilities, audio playback queue
 stt/           Speech-to-text interface + Whisper implementation
 tts/           Text-to-speech interface + OpenAI-compatible API implementation
-llm/           Language model interface + OpenAI-compatible API implementation
+llm/           Language model interface + OpenAI-compatible / Anthropic implementations
 logger.ts      Lightweight structured logger (controlled by LOG_LEVEL)
 config.ts      Environment variable loading with discriminated union config
 services.ts    Service factory facade
@@ -86,22 +88,67 @@ The `Config` type uses discriminated unions (`{ type, config }`) for each backen
 
 ## Environment Variables
 
-| Variable             | Required | Default  | Description                            |
-| -------------------- | -------- | -------- | -------------------------------------- |
-| `DISCORD_TOKEN`      | Yes      | —        | Discord bot token                      |
-| `GUILD_ID`           | Yes      | —        | Guild (server) ID                      |
-| `WHISPER_URL`        |          | —        | whisper.cpp STT server URL             |
-| `OPENAI_TTS_URL`     |          | —        | OpenAI-compatible TTS server URL       |
-| `OPENAI_TTS_API_KEY` |          | —        | TTS server API key                     |
-| `OPENAI_TTS_MODEL`   |          | —        | TTS model name                         |
-| `OPENAI_TTS_SPEAKER` |          | `1`      | TTS speaker identifier                 |
-| `OPENAI_TTS_SPEED`   |          | `1`      | TTS playback speed                     |
-| `OPENAI_LLM_URL`     |          | —        | OpenAI-compatible LLM server URL       |
-| `OPENAI_LLM_API_KEY` |          | —        | LLM server API key                     |
-| `OPENAI_LLM_MODEL`   |          | —        | LLM model name                         |
-| `SYSTEM_PROMPT`      |          | —        | System prompt for LLM (omit to skip)   |
-| `MIN_SPEECH_MS`      |          | `500`    | Min speech duration (ms) sent to STT   |
-| `SPEECH_RMS`         |          | `200`    | Min RMS amplitude to count as speech   |
-| `INTERRUPT_RMS`      |          | `500`    | Min RMS amplitude to interrupt AI      |
-| `AUTO_LEAVE_MS`      |          | `600000` | Auto-leave timeout (ms). -1 to disable |
-| `LOG_LEVEL`          |          | `INFO`   | Log level: DEBUG / INFO / WARN / ERROR |
+### Discord (required)
+
+| Variable        | Default | Description       |
+| --------------- | ------- | ----------------- |
+| `DISCORD_TOKEN` | —       | Discord bot token |
+| `GUILD_ID`      | —       | Guild (server) ID |
+
+### STT (whisper.cpp)
+
+| Variable      | Default | Description            |
+| ------------- | ------- | ---------------------- |
+| `WHISPER_URL` | —       | whisper.cpp server URL |
+
+### TTS (OpenAI-compatible API)
+
+| Variable             | Default | Description        |
+| -------------------- | ------- | ------------------ |
+| `OPENAI_TTS_URL`     | —       | TTS server URL     |
+| `OPENAI_TTS_API_KEY` | —       | TTS server API key |
+| `OPENAI_TTS_MODEL`   | —       | TTS model name     |
+| `OPENAI_TTS_SPEAKER` | `1`     | Speaker identifier |
+| `OPENAI_TTS_SPEED`   | `1`     | Playback speed     |
+
+### LLM
+
+Select backend with `LLM_TYPE` (default: `openai`).
+
+| Variable             | Default                   | Description                          |
+| -------------------- | ------------------------- | ------------------------------------ |
+| `LLM_TYPE`           | `openai`                  | LLM backend: `openai` or `anthropic` |
+| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | Path to system prompt file           |
+
+#### OpenAI-compatible (`LLM_TYPE=openai`)
+
+| Variable             | Default | Description                      |
+| -------------------- | ------- | -------------------------------- |
+| `OPENAI_LLM_URL`     | —       | OpenAI-compatible LLM server URL |
+| `OPENAI_LLM_API_KEY` | —       | LLM server API key               |
+| `OPENAI_LLM_MODEL`   | —       | LLM model name                   |
+
+#### Anthropic (`LLM_TYPE=anthropic`)
+
+| Variable                    | Default                     | Description                       |
+| --------------------------- | --------------------------- | --------------------------------- |
+| `ANTHROPIC_API_KEY`         | —                           | Anthropic API key                 |
+| `ANTHROPIC_MODEL`           | `claude-haiku-4-5-20251001` | Model name                        |
+| `ANTHROPIC_MAX_TOKENS`      | `1024`                      | Max tokens per response           |
+| `ANTHROPIC_WEB_SEARCH`      | `false`                     | Enable server-side web search     |
+| `ANTHROPIC_MAX_TOOL_ROUNDS` | `5`                         | Max tool use round trips per turn |
+
+### Voice Pipeline
+
+| Variable        | Default  | Description                            |
+| --------------- | -------- | -------------------------------------- |
+| `MIN_SPEECH_MS` | `500`    | Min speech duration (ms) sent to STT   |
+| `SPEECH_RMS`    | `200`    | Min RMS amplitude to count as speech   |
+| `INTERRUPT_RMS` | `500`    | Min RMS amplitude to interrupt AI      |
+| `AUTO_LEAVE_MS` | `600000` | Auto-leave timeout (ms). -1 to disable |
+
+### General
+
+| Variable    | Default | Description                            |
+| ----------- | ------- | -------------------------------------- |
+| `LOG_LEVEL` | `INFO`  | Log level: DEBUG / INFO / WARN / ERROR |

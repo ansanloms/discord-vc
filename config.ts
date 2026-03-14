@@ -67,6 +67,30 @@ export interface Config {
 }
 
 /**
+ * システムプロンプトをファイルから読み込む。
+ *
+ * SYSTEM_PROMPT_FILE 環境変数で指定されたパス（デフォルト: config/SYSTEM_PROMPT.md）の
+ * ファイルを読み込む。ファイルが存在しない場合は undefined を返す。
+ */
+function loadSystemPrompt(): string | undefined {
+  const filePath = Deno.env.get("SYSTEM_PROMPT_FILE") ??
+    "config/SYSTEM_PROMPT.md";
+
+  try {
+    const content = Deno.readTextFileSync(filePath).trim();
+    if (content.length > 0) {
+      return content;
+    }
+  } catch (e: unknown) {
+    if (!(e instanceof Deno.errors.NotFound)) {
+      throw e;
+    }
+  }
+
+  return undefined;
+}
+
+/**
  * LLM_TYPE 環境変数に基づいて LLM 設定を構築する。
  * 未指定または "openai" なら OpenAI 互換、"anthropic" なら Anthropic SDK を使用する。
  */
@@ -80,7 +104,7 @@ function buildLlmConfig(): LlmConfig {
         config: {
           apiKey: Deno.env.get("ANTHROPIC_API_KEY"),
           model: Deno.env.get("ANTHROPIC_MODEL") ?? "claude-haiku-4-5-20251001",
-          systemPrompt: Deno.env.get("SYSTEM_PROMPT"),
+          systemPrompt: loadSystemPrompt(),
           maxTokens: Number(Deno.env.get("ANTHROPIC_MAX_TOKENS") ?? "1024"),
           webSearch: Deno.env.get("ANTHROPIC_WEB_SEARCH") === "true",
           maxToolRounds: Number(
@@ -95,7 +119,7 @@ function buildLlmConfig(): LlmConfig {
           baseUrl: Deno.env.get("OPENAI_LLM_URL") ?? "",
           apiKey: Deno.env.get("OPENAI_LLM_API_KEY"),
           model: Deno.env.get("OPENAI_LLM_MODEL") ?? "",
-          systemPrompt: Deno.env.get("SYSTEM_PROMPT"),
+          systemPrompt: loadSystemPrompt(),
         },
       };
     default:
