@@ -9,6 +9,7 @@
 import OpenAI from "@openai/openai";
 import { createLogger } from "../logger.ts";
 import type { LanguageModel } from "./types.ts";
+import { replaceTemplateVariables } from "./template.ts";
 
 const log = createLogger("llm");
 
@@ -52,7 +53,8 @@ export interface OpenAiLlmConfig {
 export class OpenAiLlm implements LanguageModel {
   private readonly client: OpenAI;
   private readonly model: string;
-  private readonly systemPrompt?: string;
+  private readonly systemPromptTemplate?: string;
+  private context: Record<string, string> = {};
   private readonly history: OpenAI.ChatCompletionMessageParam[] = [];
 
   constructor(config: OpenAiLlmConfig) {
@@ -62,7 +64,7 @@ export class OpenAiLlm implements LanguageModel {
       ...config.clientOptions,
     });
     this.model = config.model;
-    this.systemPrompt = config.systemPrompt;
+    this.systemPromptTemplate = config.systemPrompt;
   }
 
   /**
@@ -78,8 +80,12 @@ export class OpenAiLlm implements LanguageModel {
 
     try {
       const messages: OpenAI.ChatCompletionMessageParam[] = [];
-      if (this.systemPrompt) {
-        messages.push({ role: "system", content: this.systemPrompt });
+      if (this.systemPromptTemplate) {
+        const systemPrompt = replaceTemplateVariables(
+          this.systemPromptTemplate,
+          this.context,
+        );
+        messages.push({ role: "system", content: systemPrompt });
       }
       messages.push(...this.history);
 
@@ -105,5 +111,18 @@ export class OpenAiLlm implements LanguageModel {
   clearHistory(): void {
     this.history.length = 0;
     log.info("conversation history cleared");
+  }
+
+  /**
+   * @inheritdoc
+   */
+  setContext(context: Record<string, string | undefined>): void {
+    for (const [key, value] of Object.entries(context)) {
+      if (value === undefined) {
+        delete this.context[key];
+      } else {
+        this.context[key] = value;
+      }
+    }
   }
 }

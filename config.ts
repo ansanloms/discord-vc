@@ -64,6 +64,13 @@ export interface Config {
    * 言語モデルバックエンド設定。
    */
   llm: LlmConfig;
+
+  /**
+   * ユーザーメッセージのテンプレート。
+   * `{{discord.user.name}}`, `{{discord.user.id}}`, `{{message}}` が置換される。
+   * 未設定時はメッセージをそのまま渡す。
+   */
+  messageTemplate?: string;
 }
 
 /**
@@ -168,5 +175,6 @@ export function loadConfig(): Config {
       },
     },
     llm: buildLlmConfig(),
+    messageTemplate: Deno.env.get("MESSAGE_TEMPLATE"),
   };
 }
