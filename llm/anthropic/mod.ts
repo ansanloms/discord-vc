@@ -10,6 +10,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   MessageParam,
+  TextBlockParam,
   ToolResultBlockParam,
   ToolUnion,
   ToolUseBlock,
@@ -88,14 +89,22 @@ export class AnthropicLlm implements LanguageModel {
   private context: Record<string, string> = {};
   private readonly maxTokens: number;
   private readonly tools: ToolUnion[];
+  private readonly cachedTools: ToolUnion[];
   private readonly toolExecutors: Record<string, ToolExecutor>;
   private readonly maxToolRounds: number;
   private readonly history: MessageParam[] = [];
   private discord?: DiscordContext;
 
+  /**
+   * chat() の直列化用 mutex。
+   * 前の呼び出しが完了するまで次の呼び出しを待機させる。
+   */
+  private chatMutex: Promise<void> = Promise.resolve();
+
   constructor(config: AnthropicLlmConfig) {
     this.client = new Anthropic({
       apiKey: config.apiKey,
+      maxRetries: 5,
     });
     this.model = config.model;
     this.systemPromptTemplate = config.systemPrompt;
@@ -108,6 +117,14 @@ export class AnthropicLlm implements LanguageModel {
       webSearch.tool,
       ...discordTools.map((mod) => mod.tool),
     ];
+
+    // cache_control 付きのツール配列を事前構築する。
+    // 最後のツールに breakpoint を置くことで tools 全体がキャッシュされる。
+    this.cachedTools = this.tools.map((tool, i) =>
+      i === this.tools.length - 1
+        ? { ...tool, cache_control: { type: "ephemeral" as const } }
+        : tool
+    );
 
     this.toolExecutors = {};
     for (const mod of discordTools) {
@@ -130,8 +147,27 @@ export class AnthropicLlm implements LanguageModel {
 
   /**
    * @inheritdoc
+   *
+   * mutex で直列化し、並行呼び出しによる履歴破壊を防ぐ。
    */
-  async chat(userMessage: string): Promise<string> {
+  chat(userMessage: string): Promise<string> {
+    const prev = this.chatMutex;
+    let resolve!: () => void;
+    this.chatMutex = new Promise<void>((r) => {
+      resolve = r;
+    });
+    return prev.then(() => this.chatInternal(userMessage)).finally(() =>
+      resolve()
+    );
+  }
+
+  /**
+   * chat() の実体。mutex によって直列実行が保証される。
+   */
+  private async chatInternal(userMessage: string): Promise<string> {
+    // エラー時に履歴を巻き戻すためのスナップショット。
+    const historyLen = this.history.length;
+
     this.history.push({ role: "user", content: userMessage });
 
     // 直近のターンのみ保持するよう履歴をトリミングする。
@@ -140,18 +176,19 @@ export class AnthropicLlm implements LanguageModel {
     }
 
     try {
+      // system prompt と tools はラウンドトリップ間で不変なのでループ外で構築する。
+      const system = this.buildSystemPrompt();
+
       for (let round = 0; round <= this.maxToolRounds; round++) {
-        const system = this.systemPromptTemplate
-          ? replaceTemplateVariables(this.systemPromptTemplate, this.context)
-          : undefined;
         const response = await this.client.messages.create({
           model: this.model,
           max_tokens: this.maxTokens,
           ...(system ? { system } : {}),
-          tools: this.tools,
+          tools: this.cachedTools,
           messages: this.history,
         });
 
+        this.logUsage(response.usage, round);
         this.history.push({ role: "assistant", content: response.content });
 
         // tool_use 以外の終了理由 → テキストを抽出して返す。
@@ -179,8 +216,8 @@ export class AnthropicLlm implements LanguageModel {
       return "";
     } catch (e: unknown) {
       log.error("API error:", e);
-      // 追加したユーザーメッセージを削除する — このターンは失敗した。
-      this.history.pop();
+      // このターンで追加されたメッセージをすべて削除する。
+      this.history.length = historyLen;
       return "";
     }
   }
@@ -204,6 +241,47 @@ export class AnthropicLlm implements LanguageModel {
         this.context[key] = value;
       }
     }
+  }
+
+  /**
+   * API レスポンスのトークン使用量とキャッシュヒット状況をログに出力する。
+   */
+  private logUsage(
+    usage: Anthropic.Messages.Usage,
+    round: number,
+  ): void {
+    const {
+      input_tokens,
+      output_tokens,
+      cache_creation_input_tokens,
+      cache_read_input_tokens,
+    } = usage;
+
+    log.info(
+      `usage [round ${round}]: input=${input_tokens} output=${output_tokens}` +
+        ` cache_create=${cache_creation_input_tokens ?? 0}` +
+        ` cache_read=${cache_read_input_tokens ?? 0}`,
+    );
+  }
+
+  /**
+   * システムプロンプトを構築する。
+   * Prompt Caching のため TextBlockParam 配列として返し、
+   * cache_control を付与する。
+   */
+  private buildSystemPrompt(): TextBlockParam[] | undefined {
+    if (!this.systemPromptTemplate) {
+      return undefined;
+    }
+    const text = replaceTemplateVariables(
+      this.systemPromptTemplate,
+      this.context,
+    );
+    return [{
+      type: "text",
+      text,
+      cache_control: { type: "ephemeral" },
+    }];
   }
 
   /**

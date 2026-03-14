@@ -53,6 +53,7 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
         SPEECH_RMS: "150",
         INTERRUPT_RMS: "600",
         AUTO_LEAVE_MS: "300000",
+        SPEECH_DEBOUNCE_MS: "250",
       },
       () => {
         const config = loadConfig();
@@ -63,6 +64,7 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
           speechRms: 150,
           interruptRms: 600,
           autoLeaveMs: 300000,
+          speechDebounceMs: 250,
         });
         assertEquals(config.stt, {
           type: "whisper",
@@ -129,6 +131,7 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
         speechRms: 200,
         interruptRms: 500,
         autoLeaveMs: 600000,
+        speechDebounceMs: 500,
       });
       assertEquals(config.stt, {
         type: "whisper",

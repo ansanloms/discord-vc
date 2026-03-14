@@ -113,6 +113,12 @@ export interface VoiceThresholds {
    * -1 の場合は自動退出しない。
    */
   autoLeaveMs: number;
+
+  /**
+   * 発話デバウンス待機時間（ミリ秒）。
+   * この時間内に同一ユーザーの追加発話があればまとめて LLM に投げる。
+   */
+  speechDebounceMs: number;
 }
 
 const log = createLogger("bot");
@@ -173,6 +179,16 @@ export class DiscordBot {
    * 自動退出タイマーの ID。タイマー未設定時は null。
    */
   private autoLeaveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * 発話デバウンス用バッファ。
+   * ユーザーごとに STT 結果テキストを溜め、一定時間後にまとめて LLM に投げる。
+   */
+  private readonly speechDebounce = new Map<string, {
+    texts: string[];
+    displayName: string;
+    timer: ReturnType<typeof setTimeout>;
+  }>();
 
   /**
    * 共有の Opus デコーダインスタンス。
@@ -682,14 +698,68 @@ export class DiscordBot {
       const guild = this.client.guilds.cache.get(this.config.guildId);
       const member = guild?.members.cache.get(userId);
       const displayName = member?.displayName ?? userId;
-      const formatted = formatUserMessage(
-        this.config.messageTemplate,
-        text,
-        displayName,
-        userId,
-      );
 
       log.info(`transcript from ${displayName} (${userId}): ${text}`);
+
+      // デバウンス: 連続発話をまとめてから LLM に投げる。
+      this.enqueueSpeech(userId, displayName, text);
+    } catch (e: unknown) {
+      log.error(`pipeline error for user ${userId}:`, e);
+    }
+  }
+
+  /**
+   * 発話テキストをデバウンスバッファに追加する。
+   * DEBOUNCE_MS 以内に同一ユーザーの追加発話があればまとめ、
+   * タイムアウト後にまとめて LLM → TTS パイプラインに投げる。
+   */
+  private enqueueSpeech(
+    userId: string,
+    displayName: string,
+    text: string,
+  ): void {
+    const existing = this.speechDebounce.get(userId);
+    const scheduleFlush = () =>
+      setTimeout(
+        () =>
+          this.flushSpeech(userId).catch((e) =>
+            log.error(`flush error for user ${userId}:`, e)
+          ),
+        this.config.voice.speechDebounceMs,
+      );
+
+    if (existing) {
+      clearTimeout(existing.timer);
+      existing.texts.push(text);
+      existing.timer = scheduleFlush();
+    } else {
+      const timer = scheduleFlush();
+      this.speechDebounce.set(userId, { texts: [text], displayName, timer });
+    }
+  }
+
+  /**
+   * デバウンスバッファをフラッシュし、LLM → TTS パイプラインを実行する。
+   */
+  private async flushSpeech(userId: string): Promise<void> {
+    const entry = this.speechDebounce.get(userId);
+    this.speechDebounce.delete(userId);
+    if (!entry || entry.texts.length === 0) {
+      return;
+    }
+
+    const mergedText = entry.texts.join("");
+    const formatted = formatUserMessage(
+      this.config.messageTemplate,
+      mergedText,
+      entry.displayName,
+      userId,
+    );
+
+    try {
+      log.info(
+        `sending to LLM (${entry.texts.length} segment(s)): ${mergedText}`,
+      );
       const reply = await this.llm.chat(formatted);
       if (!reply) {
         return;
@@ -735,6 +805,11 @@ export class DiscordBot {
       clearTimeout(this.autoLeaveTimer);
       this.autoLeaveTimer = null;
     }
+    // デバウンスタイマーをすべてキャンセルする。
+    for (const entry of this.speechDebounce.values()) {
+      clearTimeout(entry.timer);
+    }
+    this.speechDebounce.clear();
     if (this.currentConnection) {
       try {
         this.currentConnection.destroy();
