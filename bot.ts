@@ -48,41 +48,41 @@ import type { VoicePlayer } from "./audio/player.ts";
  */
 const vcCommand = new SlashCommandBuilder()
   .setName("aivc")
-  .setDescription("ボイスチャンネル操作")
+  .setDescription("Voice channel operations")
   .addSubcommand((sub) =>
     sub
       .setName("join")
-      .setDescription("ボイスチャンネルに参加する")
+      .setDescription("Join a voice channel")
   )
   .addSubcommand((sub) =>
     sub
       .setName("leave")
-      .setDescription("ボイスチャンネルから切断する")
+      .setDescription("Leave the voice channel")
   )
   .addSubcommand((sub) =>
     sub
       .setName("ping")
-      .setDescription("疎通確認")
+      .setDescription("Health check")
   )
   .addSubcommand((sub) =>
     sub
       .setName("message")
-      .setDescription("テキストを LLM に送信し音声で返答する")
+      .setDescription("Send text to LLM and reply with voice")
       .addStringOption((opt) =>
         opt
           .setName("text")
-          .setDescription("送信するメッセージ")
+          .setDescription("Message to send")
           .setRequired(true)
       )
   )
   .addSubcommandGroup((group) =>
     group
       .setName("clear")
-      .setDescription("各種データをクリアする")
+      .setDescription("Clear various data")
       .addSubcommand((sub) =>
         sub
           .setName("history")
-          .setDescription("LLM の会話履歴をクリアする")
+          .setDescription("Clear LLM conversation history")
       )
   );
 
@@ -316,7 +316,7 @@ export class DiscordBot {
       switch (sub) {
         case "history": {
           this.llm.clearHistory();
-          await interaction.reply("会話履歴をクリアした");
+          await interaction.reply("Conversation history cleared.");
           return;
         }
       }
@@ -327,7 +327,7 @@ export class DiscordBot {
       case "join": {
         if (!isVoiceChannel) {
           await interaction.reply({
-            content: "VC のテキストチャットから実行してくれ",
+            content: "Please run this from a VC text chat.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -343,7 +343,7 @@ export class DiscordBot {
           !isVoiceChannel || interaction.channelId !== this.currentChannelId
         ) {
           await interaction.reply({
-            content: "参加中の VC のテキストチャットから実行してくれ",
+            content: "Please run this from the text chat of the VC I'm in.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -367,7 +367,7 @@ export class DiscordBot {
           !isVoiceChannel || interaction.channelId !== this.currentChannelId
         ) {
           await interaction.reply({
-            content: "参加中の VC のテキストチャットから実行してくれ",
+            content: "Please run this from the text chat of the VC I'm in.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -381,7 +381,7 @@ export class DiscordBot {
           !isVoiceChannel || interaction.channelId !== this.currentChannelId
         ) {
           await interaction.reply({
-            content: "参加中の VC のテキストチャットから実行してくれ",
+            content: "Please run this from the text chat of the VC I'm in.",
             flags: MessageFlags.Ephemeral,
           });
           return;
@@ -422,7 +422,7 @@ export class DiscordBot {
       );
       const reply = await this.llm.chat(formatted);
       if (!reply) {
-        await interaction.editReply("（返答なし）");
+        await interaction.editReply("(No response)");
         return;
       }
 
@@ -431,7 +431,7 @@ export class DiscordBot {
       await this.voicePlayer.speak(reply);
     } catch (e: unknown) {
       log.error("text pipeline error:", e);
-      await interaction.editReply("エラーが発生した").catch(() => {});
+      await interaction.editReply("An error occurred.").catch(() => {});
     }
   }
 

@@ -143,7 +143,7 @@ function buildLlmConfig(): LlmConfig {
         },
       };
     default:
-      throw new Error(`未対応の LLM_TYPE: ${llmType}`);
+      throw new Error(`Unsupported LLM_TYPE: ${llmType}`);
   }
 }
 
@@ -154,12 +154,12 @@ function buildLlmConfig(): LlmConfig {
 export function loadConfig(): Config {
   const discordToken = Deno.env.get("DISCORD_TOKEN");
   if (!discordToken) {
-    throw new Error("必須環境変数が未設定: DISCORD_TOKEN");
+    throw new Error("Required environment variable not set: DISCORD_TOKEN");
   }
 
   const guildId = Deno.env.get("GUILD_ID");
   if (!guildId) {
-    throw new Error("必須環境変数が未設定: GUILD_ID");
+    throw new Error("Required environment variable not set: GUILD_ID");
   }
 
   return {

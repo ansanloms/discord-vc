@@ -177,7 +177,7 @@ export class OllamaLlm implements LanguageModel {
             if (images.length > 0) {
               this.history.push({
                 role: "user",
-                content: "添付画像:",
+                content: "Attached images:",
                 images,
               });
             }

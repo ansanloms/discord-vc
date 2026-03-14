@@ -16,17 +16,17 @@ export const tool: Tool = {
   type: "function",
   function: {
     name: "discord_send_message",
-    description: "指定したチャンネルにテキストメッセージを送信する。",
+    description: "Send a text message to a specified channel.",
     parameters: {
       type: "object",
       properties: {
         channelId: {
           type: "string",
-          description: "送信先のチャンネル ID。",
+          description: "The destination channel ID.",
         },
         content: {
           type: "string",
-          description: "送信するメッセージ内容。",
+          description: "The message content to send.",
         },
       },
       required: ["channelId", "content"],

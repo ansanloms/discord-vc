@@ -14,7 +14,7 @@ const log = createLogger("llm:anthropic:tools:discord");
  */
 export const tool: Tool = {
   name: "discord_list_channels",
-  description: "現在のギルド（Discord サーバー）のチャンネル一覧を取得する。",
+  description: "List all channels in the current guild (Discord server).",
   input_schema: {
     type: "object" as const,
     properties: {},

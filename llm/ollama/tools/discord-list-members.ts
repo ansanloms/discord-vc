@@ -16,13 +16,13 @@ export const tool: Tool = {
   type: "function",
   function: {
     name: "discord_list_members",
-    description: "現在のギルド（Discord サーバー）のメンバー一覧を取得する。",
+    description: "List members in the current guild (Discord server).",
     parameters: {
       type: "object",
       properties: {
         limit: {
           type: "number",
-          description: "取得するメンバーの最大数。デフォルトは 100。",
+          description: "Maximum number of members to fetch. Defaults to 100.",
         },
       },
       required: [],

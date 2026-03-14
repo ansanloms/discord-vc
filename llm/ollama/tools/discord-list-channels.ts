@@ -16,7 +16,7 @@ export const tool: Tool = {
   type: "function",
   function: {
     name: "discord_list_channels",
-    description: "現在のギルド（Discord サーバー）のチャンネル一覧を取得する。",
+    description: "List all channels in the current guild (Discord server).",
     parameters: {
       type: "object",
       properties: {},

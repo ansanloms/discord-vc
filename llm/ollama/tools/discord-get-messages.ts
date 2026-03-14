@@ -18,17 +18,17 @@ export const tool: Tool = {
   type: "function",
   function: {
     name: "discord_get_messages",
-    description: "指定したチャンネルの最新メッセージを取得する。",
+    description: "Fetch the latest messages from a specified channel.",
     parameters: {
       type: "object",
       properties: {
         channelId: {
           type: "string",
-          description: "メッセージを取得するチャンネル ID。",
+          description: "The channel ID to fetch messages from.",
         },
         limit: {
           type: "number",
-          description: "取得するメッセージの最大数。デフォルトは 20。",
+          description: "Maximum number of messages to fetch. Defaults to 20.",
         },
       },
       required: ["channelId"],

@@ -13,13 +13,13 @@ const log = createLogger("llm:anthropic:tools:discord");
  */
 export const tool: Tool = {
   name: "discord_list_members",
-  description: "現在のギルド（Discord サーバー）のメンバー一覧を取得する。",
+  description: "List members in the current guild (Discord server).",
   input_schema: {
     type: "object" as const,
     properties: {
       limit: {
         type: "number",
-        description: "取得するメンバーの最大数。デフォルトは 100。",
+        description: "Maximum number of members to fetch. Defaults to 100.",
         minimum: 1,
         maximum: 1000,
       },

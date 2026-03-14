@@ -105,7 +105,7 @@ export class VoicePlayer {
       return;
     }
 
-    log.info(`${chunks.length} チャンクを合成`);
+    log.info(`synthesizing ${chunks.length} chunk(s)`);
     this.isSpeaking = true;
 
     // 全合成リクエストを並列で発行し、順序通りにキューに追加する。
