@@ -114,7 +114,8 @@ main.ts        # エントリポイント — 依存の組み立て
 | `MIN_SPEECH_MS` | `500`      | STT に送る最小発話時間（ミリ秒）    |
 | `SPEECH_RMS`    | `200`      | 発話とみなす最小 RMS 振幅           |
 | `INTERRUPT_RMS` | `500`      | AI の再生を中断する最小 RMS 振幅    |
-| `AUTO_LEAVE_MS` | `600000`   | 自動退出までの時間（ms）。-1 で無効 |
+| `AUTO_LEAVE_MS`      | `600000`   | 自動退出までの時間（ms）。-1 で無効       |
+| `SPEECH_DEBOUNCE_MS` | `500`      | 連続発話をまとめるデバウンス待機時間（ms） |
 
 ### その他
 
