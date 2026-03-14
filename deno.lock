@@ -9,6 +9,7 @@
     "npm:@discordjs/voice@0.19.1": "0.19.1_opusscript@0.1.1",
     "npm:@snazzah/davey@~0.1.10": "0.1.10",
     "npm:discord.js@^14.25.1": "14.25.1",
+    "npm:ollama@~0.6.3": "0.6.3",
     "npm:opusscript@0.1.1": "0.1.1",
     "npm:zod@3": "3.25.76"
   },
@@ -308,6 +309,12 @@
     "magic-bytes.js@1.13.0": {
       "integrity": "sha512-afO2mnxW7GDTXMm5/AoN1WuOcdoKhtgXjIvHmobqTD1grNplhGdv3PFOyjCVmrnOZBIT/gD/koDKpYG+0mvHcg=="
     },
+    "ollama@0.6.3": {
+      "integrity": "sha512-KEWEhIqE5wtfzEIZbDCLH51VFZ6Z3ZSa6sIOg/E/tBV8S51flyqBOXi+bRxlOYKDf8i327zG9eSTb8IJxvm3Zg==",
+      "dependencies": [
+        "whatwg-fetch"
+      ]
+    },
     "opusscript@0.1.1": {
       "integrity": "sha512-mL0fZZOUnXdZ78woRXp18lApwpp0lF5tozJOD1Wut0dgrA9WuQTgSels/CSmFleaAZrJi/nci5KOVtbuxeWoQA=="
     },
@@ -335,6 +342,9 @@
     "undici@6.21.3": {
       "integrity": "sha512-gBLkYIlEnSp8pFbT64yFgGE6UIB9tAkhukC23PmMDCe5Nd+cRqKxSjw5y54MK2AZMgZfJWMaNE4nYUHgi1XEOw=="
     },
+    "whatwg-fetch@3.6.20": {
+      "integrity": "sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg=="
+    },
     "ws@8.19.0": {
       "integrity": "sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg=="
     },
@@ -351,6 +361,7 @@
       "npm:@discordjs/voice@0.19.1",
       "npm:@snazzah/davey@~0.1.10",
       "npm:discord.js@^14.25.1",
+      "npm:ollama@~0.6.3",
       "npm:opusscript@0.1.1"
     ]
   }

@@ -78,7 +78,7 @@ main.ts        # エントリポイント — 依存の組み立て
 
 | 変数                 | デフォルト                | 説明                                                   |
 | -------------------- | ------------------------- | ------------------------------------------------------ |
-| `LLM_TYPE`           | `openai`                  | LLM バックエンド: `openai` or `anthropic`              |
+| `LLM_TYPE`           | `openai`                  | LLM バックエンド: `openai` / `anthropic` / `ollama`    |
 | `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | システムプロンプトファイルのパス                       |
 | `MESSAGE_TEMPLATE`   | —                         | ユーザーメッセージのテンプレート（未設定時は変換なし） |
 
@@ -98,6 +98,14 @@ main.ts        # エントリポイント — 依存の組み立て
 | `ANTHROPIC_MODEL`           | `claude-haiku-4-5-20251001` | モデル名                     |
 | `ANTHROPIC_MAX_TOKENS`      | `1024`                      | レスポンスの最大トークン数   |
 | `ANTHROPIC_MAX_TOOL_ROUNDS` | `5`                         | ツール呼び出し最大ラウンド数 |
+
+#### Ollama（`LLM_TYPE=ollama`）
+
+| 変数                     | デフォルト               | 説明                         |
+| ------------------------ | ------------------------ | ---------------------------- |
+| `OLLAMA_HOST`            | `http://localhost:11434` | Ollama サーバー URL          |
+| `OLLAMA_MODEL`           | —                        | モデル名                     |
+| `OLLAMA_MAX_TOOL_ROUNDS` | `5`                      | ツール呼び出し最大ラウンド数 |
 
 ### 音声パイプライン
 
