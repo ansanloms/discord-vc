@@ -23,4 +23,14 @@ export interface LanguageModel {
    * 会話履歴をクリアする。
    */
   clearHistory(): void;
+
+  /**
+   * テンプレート変数のコンテキストを設定する。
+   * システムプロンプト内の `{{KEY}}` が対応する値で置換される。
+   * 既存のコンテキストにマージされる。
+   * 値が `undefined` のキーはコンテキストから削除される。
+   *
+   * @param context - キーと値のマップ。
+   */
+  setContext(context: Record<string, string | undefined>): void;
 }

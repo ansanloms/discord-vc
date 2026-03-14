@@ -36,6 +36,7 @@ import {
 } from "@discordjs/voice";
 import type { VoiceConnection } from "@discordjs/voice";
 import { createLogger } from "./logger.ts";
+import { replaceTemplateVariables } from "./llm/template.ts";
 import { calcRms, createOpusDecoder } from "./audio/codec.ts";
 import type { Config } from "./config.ts";
 import type { SpeechToText } from "./stt/types.ts";
@@ -125,6 +126,33 @@ function msToBytes(ms: number): number {
 }
 
 /**
+ * テンプレートを使ってユーザーメッセージに発言者情報を付与する。
+ * テンプレート未指定時はメッセージをそのまま返す。
+ *
+ * @param template - メッセージテンプレート（`{{discord.user.name}}`, `{{discord.user.id}}`, `{{message}}` を含む）。未指定時は変換しない。
+ * @param message - 元のメッセージ。
+ * @param displayName - ユーザーの表示名。
+ * @param userId - Discord ユーザー ID。
+ * @returns テンプレート置換後の文字列、またはそのままのメッセージ。
+ */
+function formatUserMessage(
+  template: string | undefined,
+  message: string,
+  displayName: string,
+  userId: string,
+): string {
+  if (!template) {
+    return message;
+  }
+
+  return replaceTemplateVariables(template, {
+    "discord.user.name": displayName,
+    "discord.user.id": userId,
+    "message": message,
+  });
+}
+
+/**
  * Discord クライアント、ボイスコネクション、
  * STT → LLM → TTS パイプラインを統括する。
  */
@@ -178,6 +206,7 @@ export class DiscordBot {
         GatewayIntentBits.GuildVoiceStates,
       ],
     });
+    this.llm.setContext({ "discord.guild.id": config.guildId });
     this.setupHandlers();
   }
 
@@ -254,6 +283,10 @@ export class DiscordBot {
             conn.destroy();
             this.currentConnection = null;
             this.currentChannelId = null;
+            this.llm.setContext({
+              "discord.channel.current.id": undefined,
+              "discord.channel.current.name": undefined,
+            });
           }
         }
       }, this.config.voice.autoLeaveMs);
@@ -319,6 +352,10 @@ export class DiscordBot {
           conn.destroy();
           this.currentConnection = null;
           this.currentChannelId = null;
+          this.llm.setContext({
+            "discord.channel.current.id": undefined,
+            "discord.channel.current.name": undefined,
+          });
         }
         await interaction.reply("Left VC");
         return;
@@ -349,8 +386,17 @@ export class DiscordBot {
           return;
         }
         const text = interaction.options.getString("text", true);
+        const displayName = interaction.member &&
+            "displayName" in interaction.member
+          ? interaction.member.displayName
+          : interaction.user.displayName;
         await interaction.deferReply();
-        await this.onTextMessage(text, interaction.user.tag, interaction);
+        await this.onTextMessage(
+          text,
+          displayName,
+          interaction.user.id,
+          interaction,
+        );
         return;
       }
     }
@@ -361,12 +407,19 @@ export class DiscordBot {
    */
   private async onTextMessage(
     content: string,
-    authorTag: string,
+    displayName: string,
+    userId: string,
     interaction: ChatInputCommandInteraction,
   ): Promise<void> {
     try {
-      log.info(`text from ${authorTag}: ${content}`);
-      const reply = await this.llm.chat(content);
+      log.info(`text from ${displayName} (${userId}): ${content}`);
+      const formatted = formatUserMessage(
+        this.config.messageTemplate,
+        content,
+        displayName,
+        userId,
+      );
+      const reply = await this.llm.chat(formatted);
       if (!reply) {
         await interaction.editReply("（返答なし）");
         return;
@@ -405,6 +458,12 @@ export class DiscordBot {
       `voice thresholds: minSpeechMs=${this.config.voice.minSpeechMs}, speechRms=${this.config.voice.speechRms}, interruptRms=${this.config.voice.interruptRms}`,
     );
 
+    // ギルド名をコンテキストに設定する。
+    const guild = this.client.guilds.cache.get(this.config.guildId);
+    if (guild) {
+      this.llm.setContext({ "discord.guild.name": guild.name });
+    }
+
     // スラッシュコマンドをギルドに登録する。
     const rest = new REST().setToken(this.config.discordToken);
     const clientId = this.client.user!.id;
@@ -440,6 +499,11 @@ export class DiscordBot {
     });
     this.currentConnection = connection;
     this.currentChannelId = channelId;
+    const channel = guild.channels.cache.get(channelId);
+    this.llm.setContext({
+      "discord.channel.current.id": channelId,
+      "discord.channel.current.name": channel?.name ?? channelId,
+    });
 
     connection.on("stateChange", (_old, newState) => {
       log.debug(`voice state: ${newState.status}`);
@@ -480,6 +544,10 @@ export class DiscordBot {
       }
       this.currentConnection = null;
       this.currentChannelId = null;
+      this.llm.setContext({
+        "discord.channel.current.id": undefined,
+        "discord.channel.current.name": undefined,
+      });
     }
   }
 
@@ -603,8 +671,19 @@ export class DiscordBot {
         return;
       }
 
-      log.info(`transcript: ${text}`);
-      const reply = await this.llm.chat(text);
+      // ギルドメンバーキャッシュから表示名を解決する。
+      const guild = this.client.guilds.cache.get(this.config.guildId);
+      const member = guild?.members.cache.get(userId);
+      const displayName = member?.displayName ?? userId;
+      const formatted = formatUserMessage(
+        this.config.messageTemplate,
+        text,
+        displayName,
+        userId,
+      );
+
+      log.info(`transcript from ${displayName} (${userId}): ${text}`);
+      const reply = await this.llm.chat(formatted);
       if (!reply) {
         return;
       }

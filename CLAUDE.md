@@ -76,10 +76,11 @@ main.ts        # エントリポイント — 依存の組み立て
 
 `LLM_TYPE` でバックエンドを選択する（デフォルト: `openai`）。
 
-| 変数                 | デフォルト                | 説明                                      |
-| -------------------- | ------------------------- | ----------------------------------------- |
-| `LLM_TYPE`           | `openai`                  | LLM バックエンド: `openai` or `anthropic` |
-| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | システムプロンプトファイルのパス          |
+| 変数                 | デフォルト                | 説明                                                   |
+| -------------------- | ------------------------- | ------------------------------------------------------ |
+| `LLM_TYPE`           | `openai`                  | LLM バックエンド: `openai` or `anthropic`              |
+| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | システムプロンプトファイルのパス                       |
+| `MESSAGE_TEMPLATE`   | —                         | ユーザーメッセージのテンプレート（未設定時は変換なし） |
 
 #### OpenAI 互換（`LLM_TYPE=openai`）
 

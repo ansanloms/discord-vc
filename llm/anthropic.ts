@@ -16,6 +16,7 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages";
 import { createLogger } from "../logger.ts";
 import type { LanguageModel } from "./types.ts";
+import { replaceTemplateVariables } from "./template.ts";
 
 const log = createLogger("llm:anthropic");
 
@@ -109,7 +110,8 @@ export interface AnthropicLlmConfig {
 export class AnthropicLlm implements LanguageModel {
   private readonly client: Anthropic;
   private readonly model: string;
-  private readonly system: string;
+  private readonly systemPromptTemplate?: string;
+  private context: Record<string, string> = {};
   private readonly maxTokens: number;
   private readonly tools: (Tool | Record<string, unknown>)[];
   private readonly customToolExecutors: Record<string, ToolExecutor>;
@@ -121,8 +123,7 @@ export class AnthropicLlm implements LanguageModel {
       apiKey: config.apiKey,
     });
     this.model = config.model;
-    this.system = config.systemPrompt ??
-      "あなたは音声会話アシスタントです。簡潔に回答してください。";
+    this.systemPromptTemplate = config.systemPrompt;
     this.maxTokens = config.maxTokens ?? 1024;
     this.customToolExecutors = config.customToolExecutors ?? {};
     this.maxToolRounds = config.maxToolRounds ?? 5;
@@ -165,10 +166,13 @@ export class AnthropicLlm implements LanguageModel {
 
     try {
       for (let round = 0; round <= this.maxToolRounds; round++) {
+        const system = this.systemPromptTemplate
+          ? replaceTemplateVariables(this.systemPromptTemplate, this.context)
+          : undefined;
         const response = await this.client.messages.create({
           model: this.model,
           max_tokens: this.maxTokens,
-          system: this.system,
+          ...(system ? { system } : {}),
           tools: this.tools.length > 0 ? this.tools as Tool[] : undefined,
           messages: this.history,
         });
@@ -212,6 +216,19 @@ export class AnthropicLlm implements LanguageModel {
   clearHistory(): void {
     this.history.length = 0;
     log.info("conversation history cleared");
+  }
+
+  /**
+   * @inheritdoc
+   */
+  setContext(context: Record<string, string | undefined>): void {
+    for (const [key, value] of Object.entries(context)) {
+      if (value === undefined) {
+        delete this.context[key];
+      } else {
+        this.context[key] = value;
+      }
+    }
   }
 
   /**
