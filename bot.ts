@@ -180,6 +180,12 @@ export class DiscordBot {
   private autoLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
+   * Discord ツールが登録済みかどうか。
+   * 再接続時の重複登録を防ぐ。
+   */
+  private toolsRegistered = false;
+
+  /**
    * 共有の Opus デコーダインスタンス。
    * 注意: opusscript はインスタンスごとにコーデック状態を持つため、
    * 複数ユーザーが同時に発話すると音声にアーティファクトが生じうる。
@@ -470,13 +476,14 @@ export class DiscordBot {
       this.llm.setContext({ "discord.guild.name": guild.name });
     }
 
-    // Anthropic LLM の場合、Discord 操作ツールを注入する。
-    if (this.llm instanceof AnthropicLlm) {
+    // LLM バックエンドに Discord 操作ツールを注入する（一度だけ）。
+    if (!this.toolsRegistered && this.llm instanceof AnthropicLlm) {
       const executors = createDiscordToolExecutors(
         this.client,
         this.config.guildId,
       );
       this.llm.addTools(discordTools, executors);
+      this.toolsRegistered = true;
       log.info("discord tools registered");
     }
 

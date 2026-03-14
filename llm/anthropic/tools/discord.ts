@@ -33,12 +33,12 @@ type SupportedMediaType =
   | "image/gif"
   | "image/webp";
 
-const SUPPORTED_MEDIA_TYPES: Record<string, SupportedMediaType> = {
-  "image/jpeg": "image/jpeg",
-  "image/png": "image/png",
-  "image/gif": "image/gif",
-  "image/webp": "image/webp",
-};
+const SUPPORTED_MEDIA_TYPES = new Set<SupportedMediaType>([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
 
 /**
  * contentType が Anthropic API でサポートされる画像タイプか判定する。
@@ -47,8 +47,15 @@ function toSupportedMediaType(
   contentType: string | null,
 ): SupportedMediaType | null {
   if (!contentType) return null;
-  return SUPPORTED_MEDIA_TYPES[contentType] ?? null;
+  return SUPPORTED_MEDIA_TYPES.has(contentType as SupportedMediaType)
+    ? (contentType as SupportedMediaType)
+    : null;
 }
+
+/**
+ * 画像フェッチのタイムアウト（ミリ秒）。
+ */
+const IMAGE_FETCH_TIMEOUT_MS = 10_000;
 
 /**
  * Discord 操作ツールの Anthropic Tool 定義。
@@ -63,6 +70,7 @@ export const discordTools: Tool[] = [
         limit: {
           type: "number",
           description: "取得するメンバーの最大数。デフォルトは 100。",
+          maximum: 1000,
         },
       },
       required: [],
@@ -108,6 +116,7 @@ export const discordTools: Tool[] = [
         limit: {
           type: "number",
           description: "取得するメッセージの最大数。デフォルトは 20。",
+          maximum: 100,
         },
       },
       required: ["channelId"],
@@ -148,11 +157,11 @@ export function createDiscordToolExecutors(
       const channels = await guild.channels.fetch();
 
       const result = channels
-        .filter((ch) => ch !== null)
+        .filter((ch): ch is NonNullable<typeof ch> => ch !== null)
         .map((ch) => ({
-          id: ch!.id,
-          name: ch!.name,
-          type: ChannelType[ch!.type],
+          id: ch.id,
+          name: ch.name,
+          type: ChannelType[ch.type],
         }));
 
       log.debug(`listed ${result.length} channels`);
@@ -163,7 +172,8 @@ export function createDiscordToolExecutors(
       const channelId = input.channelId as string;
       const content = input.content as string;
 
-      const channel = await client.channels.fetch(channelId);
+      const guild = await client.guilds.fetch(guildId);
+      const channel = await guild.channels.fetch(channelId);
       if (!channel || !channel.isTextBased()) {
         throw new Error(`channel ${channelId} is not a text channel`);
       }
@@ -182,7 +192,8 @@ export function createDiscordToolExecutors(
       const channelId = input.channelId as string;
       const limit = (input.limit as number | undefined) ?? 20;
 
-      const channel = await client.channels.fetch(channelId);
+      const guild = await client.guilds.fetch(guildId);
+      const channel = await guild.channels.fetch(channelId);
       if (!channel || !channel.isTextBased()) {
         throw new Error(`channel ${channelId} is not a text channel`);
       }
@@ -227,7 +238,9 @@ export function createDiscordToolExecutors(
           }
 
           try {
-            const res = await fetch(attachment.url);
+            const res = await fetch(attachment.url, {
+              signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS),
+            });
             if (!res.ok) {
               log.warn(
                 `failed to fetch image ${attachment.name}: ${res.status}`,
