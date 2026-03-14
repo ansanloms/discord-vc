@@ -7,9 +7,9 @@
  */
 
 import OpenAI from "@openai/openai";
-import { createLogger } from "../logger.ts";
-import type { LanguageModel } from "./types.ts";
-import { replaceTemplateVariables } from "./template.ts";
+import { createLogger } from "../../logger.ts";
+import type { DiscordContext, LanguageModel } from "../types.ts";
+import { replaceTemplateVariables } from "../template.ts";
 
 const log = createLogger("llm");
 
@@ -124,5 +124,13 @@ export class OpenAiLlm implements LanguageModel {
         this.context[key] = value;
       }
     }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  setDiscordClient(_discord: DiscordContext): void {
+    // OpenAI Chat Completions API はツール非対応。
+    // Agents SDK 移行時に実装する。
   }
 }

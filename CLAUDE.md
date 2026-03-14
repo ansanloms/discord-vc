@@ -92,13 +92,12 @@ main.ts        # エントリポイント — 依存の組み立て
 
 #### Anthropic（`LLM_TYPE=anthropic`）
 
-| 変数                        | デフォルト                  | 説明                             |
-| --------------------------- | --------------------------- | -------------------------------- |
-| `ANTHROPIC_API_KEY`         | —                           | Anthropic API キー               |
-| `ANTHROPIC_MODEL`           | `claude-haiku-4-5-20251001` | モデル名                         |
-| `ANTHROPIC_MAX_TOKENS`      | `1024`                      | レスポンスの最大トークン数       |
-| `ANTHROPIC_WEB_SEARCH`      | `false`                     | サーバーサイド web search 有効化 |
-| `ANTHROPIC_MAX_TOOL_ROUNDS` | `5`                         | ツール呼び出し最大ラウンド数     |
+| 変数                        | デフォルト                  | 説明                         |
+| --------------------------- | --------------------------- | ---------------------------- |
+| `ANTHROPIC_API_KEY`         | —                           | Anthropic API キー           |
+| `ANTHROPIC_MODEL`           | `claude-haiku-4-5-20251001` | モデル名                     |
+| `ANTHROPIC_MAX_TOKENS`      | `1024`                      | レスポンスの最大トークン数   |
+| `ANTHROPIC_MAX_TOOL_ROUNDS` | `5`                         | ツール呼び出し最大ラウンド数 |
 
 ### 音声パイプライン
 

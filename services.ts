@@ -13,9 +13,8 @@ import type { TextToSpeech } from "./tts/types.ts";
 import type { LanguageModel } from "./llm/types.ts";
 import { WhisperStt } from "./stt/whisper.ts";
 import { OpenAiTts } from "./tts/openai.ts";
-import { OpenAiLlm } from "./llm/openai.ts";
-import { AnthropicLlm } from "./llm/anthropic.ts";
-import type { AnthropicLlmConfig } from "./llm/anthropic.ts";
+import { OpenAiLlm } from "./llm/openai/mod.ts";
+import { AnthropicLlm } from "./llm/anthropic/mod.ts";
 import { VoicePlayer } from "./audio/player.ts";
 
 /**
@@ -48,34 +47,22 @@ function createTts(config: Config["tts"]): TextToSpeech {
   }
 }
 
-/**
- * LLM 生成時に追加で渡すオプション。
- * Anthropic の場合にカスタムツール等を注入するために使用する。
- */
-export type LlmExtras = Partial<AnthropicLlmConfig>;
-
-function createLlm(
-  config: Config["llm"],
-  extras?: LlmExtras,
-): LanguageModel {
+function createLlm(config: Config["llm"]): LanguageModel {
   switch (config.type) {
     case "openai":
       return new OpenAiLlm(config.config);
     case "anthropic":
-      return new AnthropicLlm({ ...config.config, ...extras });
+      return new AnthropicLlm(config.config);
   }
 }
 
 /**
  * Config に基づいてサービスインスタンスを生成する。
  */
-export function createServices(
-  config: Config,
-  llmExtras?: LlmExtras,
-): Services {
+export function createServices(config: Config): Services {
   const stt = createStt(config.stt);
   const tts = createTts(config.tts);
-  const llm = createLlm(config.llm, llmExtras);
+  const llm = createLlm(config.llm);
   const voicePlayer = new VoicePlayer(tts);
 
   return { stt, tts, llm, voicePlayer };

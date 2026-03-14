@@ -42,11 +42,6 @@ import type { Config } from "./config.ts";
 import type { SpeechToText } from "./stt/types.ts";
 import type { LanguageModel } from "./llm/types.ts";
 import type { VoicePlayer } from "./audio/player.ts";
-import { AnthropicLlm } from "./llm/anthropic.ts";
-import {
-  createDiscordToolExecutors,
-  discordTools,
-} from "./llm/anthropic/tools/discord.ts";
 
 /**
  * /aivc スラッシュコマンドの定義。
@@ -178,12 +173,6 @@ export class DiscordBot {
    * 自動退出タイマーの ID。タイマー未設定時は null。
    */
   private autoLeaveTimer: ReturnType<typeof setTimeout> | null = null;
-
-  /**
-   * Discord ツールが登録済みかどうか。
-   * 再接続時の重複登録を防ぐ。
-   */
-  private toolsRegistered = false;
 
   /**
    * 共有の Opus デコーダインスタンス。
@@ -476,16 +465,11 @@ export class DiscordBot {
       this.llm.setContext({ "discord.guild.name": guild.name });
     }
 
-    // LLM バックエンドに Discord 操作ツールを注入する（一度だけ）。
-    if (!this.toolsRegistered && this.llm instanceof AnthropicLlm) {
-      const executors = createDiscordToolExecutors(
-        this.client,
-        this.config.guildId,
-      );
-      this.llm.addTools(discordTools, executors);
-      this.toolsRegistered = true;
-      log.info("discord tools registered");
-    }
+    // LLM バックエンドに Discord クライアントを設定する。
+    this.llm.setDiscordClient({
+      client: this.client,
+      guildId: this.config.guildId,
+    });
 
     // スラッシュコマンドをギルドに登録する。
     const rest = new REST().setToken(this.config.discordToken);

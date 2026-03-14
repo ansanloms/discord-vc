@@ -10,8 +10,8 @@
 
 import type { WhisperSttConfig } from "./stt/whisper.ts";
 import type { OpenAiTtsConfig } from "./tts/openai.ts";
-import type { OpenAiLlmConfig } from "./llm/openai.ts";
-import type { AnthropicLlmConfig } from "./llm/anthropic.ts";
+import type { OpenAiLlmConfig } from "./llm/openai/mod.ts";
+import type { AnthropicLlmConfig } from "./llm/anthropic/mod.ts";
 import type { VoiceThresholds } from "./bot.ts";
 
 /**
@@ -113,7 +113,6 @@ function buildLlmConfig(): LlmConfig {
           model: Deno.env.get("ANTHROPIC_MODEL") ?? "claude-haiku-4-5-20251001",
           systemPrompt: loadSystemPrompt(),
           maxTokens: Number(Deno.env.get("ANTHROPIC_MAX_TOKENS") ?? "1024"),
-          webSearch: Deno.env.get("ANTHROPIC_WEB_SEARCH") === "true",
           maxToolRounds: Number(
             Deno.env.get("ANTHROPIC_MAX_TOOL_ROUNDS") ?? "5",
           ),
