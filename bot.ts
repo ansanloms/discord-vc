@@ -395,7 +395,11 @@ export class DiscordBot {
       `TTS: ${this.config.tts.type} (${this.config.tts.config.baseUrl})`,
     );
     log.info(
-      `LLM: ${this.config.llm.type} (${this.config.llm.config.baseUrl})`,
+      `LLM: ${this.config.llm.type} (${
+        this.config.llm.type === "openai"
+          ? this.config.llm.config.baseUrl
+          : this.config.llm.config.model
+      })`,
     );
     log.info(
       `voice thresholds: minSpeechMs=${this.config.voice.minSpeechMs}, speechRms=${this.config.voice.speechRms}, interruptRms=${this.config.voice.interruptRms}`,
