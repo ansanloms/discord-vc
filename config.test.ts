@@ -45,9 +45,8 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
         OPENAI_TTS_MODEL: "tts-model",
         OPENAI_TTS_SPEAKER: "42",
         OPENAI_TTS_SPEED: "1.5",
-        OPENAI_LLM_URL: "http://llm:5555",
-        OPENAI_LLM_API_KEY: "sk-test",
-        OPENAI_LLM_MODEL: "test-model",
+        CLAUDE_API_KEY: "sk-test",
+        CLAUDE_MODEL: "test-model",
         SYSTEM_PROMPT_FILE: tmpFile,
         MIN_SPEECH_MS: "300",
         SPEECH_RMS: "150",
@@ -81,12 +80,13 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
           },
         });
         assertEquals(config.llm, {
-          type: "openai",
+          type: "claude",
           config: {
-            baseUrl: "http://llm:5555",
             apiKey: "sk-test",
             model: "test-model",
             systemPrompt: "テスト用プロンプト",
+            maxTokens: 1024,
+            maxToolRounds: 5,
           },
         });
       },
@@ -105,9 +105,10 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
     "OPENAI_TTS_MODEL",
     "OPENAI_TTS_SPEAKER",
     "OPENAI_TTS_SPEED",
-    "OPENAI_LLM_URL",
-    "OPENAI_LLM_API_KEY",
-    "OPENAI_LLM_MODEL",
+    "CLAUDE_API_KEY",
+    "CLAUDE_MODEL",
+    "CLAUDE_MAX_TOKENS",
+    "CLAUDE_MAX_TOOL_ROUNDS",
     "SYSTEM_PROMPT_FILE",
     "MIN_SPEECH_MS",
     "SPEECH_RMS",
@@ -148,12 +149,13 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
         },
       });
       assertEquals(config.llm, {
-        type: "openai",
+        type: "claude",
         config: {
-          baseUrl: "",
           apiKey: undefined,
-          model: "",
+          model: "claude-haiku-4-5-20251001",
           systemPrompt: undefined,
+          maxTokens: 1024,
+          maxToolRounds: 5,
         },
       });
     });

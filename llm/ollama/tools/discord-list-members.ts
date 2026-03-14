@@ -2,12 +2,12 @@
  * Discord ギルドメンバー一覧取得ツール（Ollama 形式）。
  *
  * ツール定義のみ Ollama（OpenAI 互換）形式で提供し、
- * 実行ロジックは Anthropic 側の実装を再利用する。
+ * 実行ロジックは Claude 側の実装を再利用する。
  */
 
 import type { Tool } from "ollama";
 
-export { execute } from "../../anthropic/tools/discord-list-members.ts";
+export { execute } from "../../claude/tools/discord-list-members.ts";
 
 /**
  * ツール定義。

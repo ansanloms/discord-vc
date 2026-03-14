@@ -1,5 +1,5 @@
 /**
- * Anthropic サーバーサイド web search ツール定義。
+ * Claude サーバーサイド web search ツール定義。
  *
  * サーバーサイドツールのため executor は不要。
  * API 側で自動的に実行され、結果がレスポンスに含まれる。

@@ -7,7 +7,7 @@ import { ChannelType } from "discord.js";
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import { createLogger } from "../../../logger.ts";
 
-const log = createLogger("llm:anthropic:tools:discord");
+const log = createLogger("llm:claude:tools:discord");
 
 /**
  * ツール定義。

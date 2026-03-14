@@ -251,7 +251,7 @@ export class OllamaLlm implements LanguageModel {
   /**
    * ツール実行結果をテキストと画像（base64）に分離する。
    *
-   * discord-get-messages は Anthropic 固有の ImageBlockParam を含む
+   * discord-get-messages は Claude 固有の ImageBlockParam を含む
    * 配列を返す場合がある。テキスト部分は tool ロールの content に、
    * 画像部分は user ロールの images フィールドに渡すために分離する。
    */

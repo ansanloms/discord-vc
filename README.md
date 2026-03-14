@@ -10,7 +10,7 @@ Discord Voice Channel
   -> PCM buffer
   -> Noise / length filter
   -> STT (whisper.cpp)
-  -> LLM (OpenAI-compatible API or Anthropic Claude API)
+  -> LLM (Claude API or Ollama)
   -> TTS (OpenAI-compatible API)
   -> Audio playback (@discordjs/voice)
 ```
@@ -21,8 +21,8 @@ Discord Voice Channel
 - [whisper.cpp](https://github.com/ggml-org/whisper.cpp) server for STT
 - OpenAI-compatible TTS server (e.g. [voicevox-openai-tts](https://github.com/nichiki/voicevox-openai-tts))
 - One of the following LLM backends:
-  - OpenAI-compatible LLM server (e.g. Ollama, OpenClaw)
-  - [Anthropic API](https://docs.anthropic.com/) key (for Claude models with tool use support)
+  - [Claude API](https://docs.anthropic.com/) key (for Claude models with tool use support)
+  - [Ollama](https://ollama.com/) server
 
 ## Setup
 
@@ -72,7 +72,7 @@ deno task test            # Run tests
 audio/         PCM/WAV codec utilities, audio playback queue
 stt/           Speech-to-text interface + Whisper implementation
 tts/           Text-to-speech interface + OpenAI-compatible API implementation
-llm/           Language model interface + OpenAI-compatible / Anthropic implementations
+llm/           Language model interface + Claude / Ollama implementations
 logger.ts      Lightweight structured logger (controlled by LOG_LEVEL)
 config.ts      Environment variable loading with discriminated union config
 services.ts    Service factory facade
@@ -113,29 +113,21 @@ The `Config` type uses discriminated unions (`{ type, config }`) for each backen
 
 ### LLM
 
-Select backend with `LLM_TYPE` (default: `openai`).
+Select backend with `LLM_TYPE` (default: `claude`).
 
-| Variable             | Default                   | Description                          |
-| -------------------- | ------------------------- | ------------------------------------ |
-| `LLM_TYPE`           | `openai`                  | LLM backend: `openai` or `anthropic` |
-| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | Path to system prompt file           |
+| Variable             | Default                   | Description                      |
+| -------------------- | ------------------------- | -------------------------------- |
+| `LLM_TYPE`           | `claude`                  | LLM backend: `claude` / `ollama` |
+| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | Path to system prompt file       |
 
-#### OpenAI-compatible (`LLM_TYPE=openai`)
+#### Claude (`LLM_TYPE=claude`)
 
-| Variable             | Default | Description                      |
-| -------------------- | ------- | -------------------------------- |
-| `OPENAI_LLM_URL`     | —       | OpenAI-compatible LLM server URL |
-| `OPENAI_LLM_API_KEY` | —       | LLM server API key               |
-| `OPENAI_LLM_MODEL`   | —       | LLM model name                   |
-
-#### Anthropic (`LLM_TYPE=anthropic`)
-
-| Variable                    | Default                     | Description                       |
-| --------------------------- | --------------------------- | --------------------------------- |
-| `ANTHROPIC_API_KEY`         | —                           | Anthropic API key                 |
-| `ANTHROPIC_MODEL`           | `claude-haiku-4-5-20251001` | Model name                        |
-| `ANTHROPIC_MAX_TOKENS`      | `1024`                      | Max tokens per response           |
-| `ANTHROPIC_MAX_TOOL_ROUNDS` | `5`                         | Max tool use round trips per turn |
+| Variable                 | Default                     | Description                       |
+| ------------------------ | --------------------------- | --------------------------------- |
+| `CLAUDE_API_KEY`         | —                           | Claude API key                    |
+| `CLAUDE_MODEL`           | `claude-haiku-4-5-20251001` | Model name                        |
+| `CLAUDE_MAX_TOKENS`      | `1024`                      | Max tokens per response           |
+| `CLAUDE_MAX_TOOL_ROUNDS` | `5`                         | Max tool use round trips per turn |
 
 ### Voice Pipeline
 

@@ -49,8 +49,7 @@ import type { VoicePlayer } from "./audio/player.ts";
  * LLM バックエンドの選択肢。
  */
 const LLM_CHOICES = [
-  { name: "openai", value: "openai" },
-  { name: "anthropic", value: "anthropic" },
+  { name: "claude", value: "claude" },
   { name: "ollama", value: "ollama" },
 ] as const;
 
@@ -492,11 +491,7 @@ export class DiscordBot {
       `TTS: ${this.config.tts.type} (${this.config.tts.config.baseUrl})`,
     );
     log.info(
-      `LLM: ${this.config.llm.type} (${
-        this.config.llm.type === "openai"
-          ? this.config.llm.config.baseUrl
-          : this.config.llm.config.model
-      })`,
+      `LLM: ${this.config.llm.type} (${this.config.llm.config.model})`,
     );
     log.info(
       `voice thresholds: minSpeechMs=${this.config.voice.minSpeechMs}, speechRms=${this.config.voice.speechRms}, interruptRms=${this.config.voice.interruptRms}`,

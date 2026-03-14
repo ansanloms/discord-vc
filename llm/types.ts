@@ -2,7 +2,7 @@
  * 言語モデル（Language Model）の抽象化。
  *
  * このインターフェースを実装することで、LLM バックエンド
- * （例: OpenAI、Anthropic、Ollama）をパイプラインの他の部分を
+ * （例: Claude、Ollama）をパイプラインの他の部分を
  * 変更せずに差し替えられる。
  */
 
