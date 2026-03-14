@@ -13,17 +13,17 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages";
 import { createLogger } from "../../../logger.ts";
 
-const log = createLogger("llm:anthropic:tools:discord");
+const log = createLogger("llm:claude:tools:discord");
 
 /**
  * 画像添付ファイルの最大バイト数（5 MB）。
  * これを超える画像はスキップされる。
- * Anthropic API 側で長辺 1568px を超える画像は自動リサイズされる。
+ * Claude API 側で長辺 1568px を超える画像は自動リサイズされる。
  */
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 /**
- * Anthropic API がサポートする画像メディアタイプ。
+ * Claude API がサポートする画像メディアタイプ。
  */
 type SupportedMediaType =
   | "image/jpeg"
@@ -39,7 +39,7 @@ const SUPPORTED_MEDIA_TYPES = new Set<SupportedMediaType>([
 ]);
 
 /**
- * contentType が Anthropic API でサポートされる画像タイプか判定する。
+ * contentType が Claude API でサポートされる画像タイプか判定する。
  */
 function toSupportedMediaType(
   contentType: string | null,

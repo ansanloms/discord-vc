@@ -1,5 +1,5 @@
 /**
- * Anthropic SDK を直接使った LLM 実装。
+ * Claude（Anthropic SDK）を使った LLM 実装。
  *
  * `@anthropic-ai/sdk` で Claude API に接続する。
  * tool use（web search + Discord 操作ツール）に対応し、
@@ -24,7 +24,7 @@ import * as listChannels from "./tools/discord-list-channels.ts";
 import * as sendMessage from "./tools/discord-send-message.ts";
 import * as getMessages from "./tools/discord-get-messages.ts";
 
-const log = createLogger("llm:anthropic");
+const log = createLogger("llm:claude");
 
 /**
  * 保持するユーザー＋アシスタントのターンペア数の上限。
@@ -46,11 +46,11 @@ type ToolExecutor = (
 ) => Promise<ToolExecutorResult>;
 
 /**
- * AnthropicLlm のコンストラクタ設定。
+ * ClaudeLlm のコンストラクタ設定。
  */
-export interface AnthropicLlmConfig {
+export interface ClaudeLlmConfig {
   /**
-   * API キー。未指定なら ANTHROPIC_API_KEY 環境変数を使用する。
+   * API キー。未指定なら CLAUDE_API_KEY 環境変数を使用する。
    */
   apiKey?: string;
 
@@ -76,13 +76,13 @@ export interface AnthropicLlmConfig {
 }
 
 /**
- * Anthropic SDK 経由の言語モデル。
+ * Claude（Anthropic SDK）経由の言語モデル。
  *
  * 会話履歴はメモリ上に保持し、MAX_HISTORY * 2 メッセージを
  * 超えると古いものから自動的に切り捨てる。
  * tool use のループは chat() 内部で完結する。
  */
-export class AnthropicLlm implements LanguageModel {
+export class ClaudeLlm implements LanguageModel {
   private readonly client: Anthropic;
   private readonly model: string;
   private readonly systemPromptTemplate?: string;
@@ -101,7 +101,7 @@ export class AnthropicLlm implements LanguageModel {
    */
   private chatMutex: Promise<void> = Promise.resolve();
 
-  constructor(config: AnthropicLlmConfig) {
+  constructor(config: ClaudeLlmConfig) {
     this.client = new Anthropic({
       apiKey: config.apiKey,
       maxRetries: 5,

@@ -10,8 +10,7 @@
 
 import type { WhisperSttConfig } from "./stt/whisper.ts";
 import type { OpenAiTtsConfig } from "./tts/openai.ts";
-import type { OpenAiLlmConfig } from "./llm/openai/mod.ts";
-import type { AnthropicLlmConfig } from "./llm/anthropic/mod.ts";
+import type { ClaudeLlmConfig } from "./llm/claude/mod.ts";
 import type { OllamaLlmConfig } from "./llm/ollama/mod.ts";
 import type { VoiceThresholds } from "./bot.ts";
 
@@ -29,8 +28,7 @@ export type TtsConfig = { type: "openai"; config: OpenAiTtsConfig };
  * LLM バックエンド設定。
  */
 export type LlmConfig =
-  | { type: "openai"; config: OpenAiLlmConfig }
-  | { type: "anthropic"; config: AnthropicLlmConfig }
+  | { type: "claude"; config: ClaudeLlmConfig }
   | { type: "ollama"; config: OllamaLlmConfig };
 
 /**
@@ -102,35 +100,25 @@ function loadSystemPrompt(): string | undefined {
 /**
  * LLM バックエンド設定を構築する。
  * llmType 引数または LLM_TYPE 環境変数に基づいてバックエンドを選択する。
- * 対応バックエンド: "openai"（デフォルト）, "anthropic", "ollama"。
+ * 対応バックエンド: "claude"（デフォルト）, "ollama"。
  */
 export function buildLlmConfig(
   llmType?: string,
 ): LlmConfig {
-  llmType = llmType ?? Deno.env.get("LLM_TYPE") ?? "openai";
+  llmType = llmType ?? Deno.env.get("LLM_TYPE") ?? "claude";
 
   switch (llmType) {
-    case "anthropic":
+    case "claude":
       return {
-        type: "anthropic",
+        type: "claude",
         config: {
-          apiKey: Deno.env.get("ANTHROPIC_API_KEY"),
-          model: Deno.env.get("ANTHROPIC_MODEL") ?? "claude-haiku-4-5-20251001",
+          apiKey: Deno.env.get("CLAUDE_API_KEY"),
+          model: Deno.env.get("CLAUDE_MODEL") ?? "claude-haiku-4-5-20251001",
           systemPrompt: loadSystemPrompt(),
-          maxTokens: Number(Deno.env.get("ANTHROPIC_MAX_TOKENS") ?? "1024"),
+          maxTokens: Number(Deno.env.get("CLAUDE_MAX_TOKENS") ?? "1024"),
           maxToolRounds: Number(
-            Deno.env.get("ANTHROPIC_MAX_TOOL_ROUNDS") ?? "5",
+            Deno.env.get("CLAUDE_MAX_TOOL_ROUNDS") ?? "5",
           ),
-        },
-      };
-    case "openai":
-      return {
-        type: "openai",
-        config: {
-          baseUrl: Deno.env.get("OPENAI_LLM_URL") ?? "",
-          apiKey: Deno.env.get("OPENAI_LLM_API_KEY"),
-          model: Deno.env.get("OPENAI_LLM_MODEL") ?? "",
-          systemPrompt: loadSystemPrompt(),
         },
       };
     case "ollama":

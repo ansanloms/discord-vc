@@ -33,7 +33,7 @@ config/        # システムプロンプト等の設定ファイル
 audio/         # PCM/WAV コーデックユーティリティ、音声再生キュー
 stt/           # 音声認識インターフェース + Whisper 実装
 tts/           # 音声合成インターフェース + OpenAI 互換 API 実装
-llm/           # 言語モデルインターフェース + OpenAI 互換 / Anthropic 実装
+llm/           # 言語モデルインターフェース + Claude / Ollama 実装
 logger.ts      # 軽量構造化ロガー（LOG_LEVEL 環境変数で制御）
 config.ts      # 環境変数の読み込み
 services.ts    # サービスファクトリファサード
@@ -78,26 +78,18 @@ main.ts        # エントリポイント — 依存の組み立て
 
 | 変数                 | デフォルト                | 説明                                                   |
 | -------------------- | ------------------------- | ------------------------------------------------------ |
-| `LLM_TYPE`           | `openai`                  | LLM バックエンド: `openai` / `anthropic` / `ollama`    |
+| `LLM_TYPE`           | `claude`                  | LLM バックエンド: `claude` / `ollama`                  |
 | `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | システムプロンプトファイルのパス                       |
 | `MESSAGE_TEMPLATE`   | —                         | ユーザーメッセージのテンプレート（未設定時は変換なし） |
 
-#### OpenAI 互換（`LLM_TYPE=openai`）
+#### Claude（`LLM_TYPE=claude`）
 
-| 変数                 | デフォルト | 説明                         |
-| -------------------- | ---------- | ---------------------------- |
-| `OPENAI_LLM_URL`     | —          | OpenAI 互換 LLM サーバー URL |
-| `OPENAI_LLM_API_KEY` | —          | LLM サーバーの API キー      |
-| `OPENAI_LLM_MODEL`   | —          | LLM モデル名                 |
-
-#### Anthropic（`LLM_TYPE=anthropic`）
-
-| 変数                        | デフォルト                  | 説明                         |
-| --------------------------- | --------------------------- | ---------------------------- |
-| `ANTHROPIC_API_KEY`         | —                           | Anthropic API キー           |
-| `ANTHROPIC_MODEL`           | `claude-haiku-4-5-20251001` | モデル名                     |
-| `ANTHROPIC_MAX_TOKENS`      | `1024`                      | レスポンスの最大トークン数   |
-| `ANTHROPIC_MAX_TOOL_ROUNDS` | `5`                         | ツール呼び出し最大ラウンド数 |
+| 変数                     | デフォルト                  | 説明                         |
+| ------------------------ | --------------------------- | ---------------------------- |
+| `CLAUDE_API_KEY`         | —                           | Claude API キー              |
+| `CLAUDE_MODEL`           | `claude-haiku-4-5-20251001` | モデル名                     |
+| `CLAUDE_MAX_TOKENS`      | `1024`                      | レスポンスの最大トークン数   |
+| `CLAUDE_MAX_TOOL_ROUNDS` | `5`                         | ツール呼び出し最大ラウンド数 |
 
 #### Ollama（`LLM_TYPE=ollama`）
 
