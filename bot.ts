@@ -748,7 +748,7 @@ export class DiscordBot {
       return;
     }
 
-    const mergedText = entry.texts.join(" ");
+    const mergedText = entry.texts.join("");
     const formatted = formatUserMessage(
       this.config.messageTemplate,
       mergedText,

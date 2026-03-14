@@ -133,6 +133,9 @@ export class OllamaLlm implements LanguageModel {
    * chat() の実体。mutex によって直列実行が保証される。
    */
   private async chatInternal(userMessage: string): Promise<string> {
+    // エラー時に履歴を巻き戻すためのスナップショット。
+    const historyLen = this.history.length;
+
     this.history.push({ role: "user", content: userMessage });
 
     // 直近のターンのみ保持するよう履歴をトリミングする。
@@ -218,7 +221,8 @@ export class OllamaLlm implements LanguageModel {
       return "";
     } catch (e: unknown) {
       log.error("API error:", e);
-      this.history.pop();
+      // このターンで追加されたメッセージをすべて削除する。
+      this.history.length = historyLen;
       return "";
     }
   }
