@@ -1,11 +1,11 @@
 {
   "version": "5",
   "specifiers": {
-    "jsr:@openai/openai@^6.26.0": "6.26.0",
+    "jsr:@openai/openai@^6.29.0": "6.29.0",
     "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/dotenv@~0.225.6": "0.225.6",
     "jsr:@std/internal@^1.0.12": "1.0.12",
-    "npm:@anthropic-ai/sdk@latest": "0.78.0_zod@3.25.76",
+    "npm:@anthropic-ai/sdk@0.78": "0.78.0_zod@3.25.76",
     "npm:@discordjs/voice@0.19.1": "0.19.1_opusscript@0.1.1",
     "npm:@snazzah/davey@~0.1.10": "0.1.10",
     "npm:discord.js@^14.25.1": "14.25.1",
@@ -13,8 +13,8 @@
     "npm:zod@3": "3.25.76"
   },
   "jsr": {
-    "@openai/openai@6.26.0": {
-      "integrity": "9da9b30d91a8044b9f212c3a5a936dc5d49c180215cf2ee06dcdbf9261783da9",
+    "@openai/openai@6.29.0": {
+      "integrity": "43c384ea4bf35c95b207d1e46c72e8170fa13e8932a6205c2847b7ca016ed767",
       "dependencies": [
         "npm:zod"
       ]
@@ -344,10 +344,10 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@openai/openai@^6.26.0",
+      "jsr:@openai/openai@^6.29.0",
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/dotenv@~0.225.6",
-      "npm:@anthropic-ai/sdk@latest",
+      "npm:@anthropic-ai/sdk@0.78",
       "npm:@discordjs/voice@0.19.1",
       "npm:@snazzah/davey@~0.1.10",
       "npm:discord.js@^14.25.1",

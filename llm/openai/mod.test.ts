@@ -1,5 +1,5 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
-import { OpenAiLlm } from "./openai.ts";
+import { OpenAiLlm } from "./mod.ts";
 
 type FetchArgs = { url: string; init?: RequestInit };
 

@@ -135,7 +135,6 @@ Select backend with `LLM_TYPE` (default: `openai`).
 | `ANTHROPIC_API_KEY`         | —                           | Anthropic API key                 |
 | `ANTHROPIC_MODEL`           | `claude-haiku-4-5-20251001` | Model name                        |
 | `ANTHROPIC_MAX_TOKENS`      | `1024`                      | Max tokens per response           |
-| `ANTHROPIC_WEB_SEARCH`      | `false`                     | Enable server-side web search     |
 | `ANTHROPIC_MAX_TOOL_ROUNDS` | `5`                         | Max tool use round trips per turn |
 
 ### Voice Pipeline

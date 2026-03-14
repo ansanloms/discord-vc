@@ -6,6 +6,19 @@
  * 変更せずに差し替えられる。
  */
 
+import type { Client } from "discord.js";
+
+/**
+ * Discord クライアントと操作対象ギルドの組。
+ * LLM が Discord 操作ツールを実行する際に必要な情報。
+ */
+export interface DiscordContext {
+  /** Discord.js クライアントインスタンス。 */
+  client: Client;
+  /** 操作対象のギルド ID。 */
+  guildId: string;
+}
+
 /**
  * 会話履歴を内部で管理するステートフルな対話型 LLM。
  */
@@ -33,4 +46,12 @@ export interface LanguageModel {
    * @param context - キーと値のマップ。
    */
   setContext(context: Record<string, string | undefined>): void;
+
+  /**
+   * Discord クライアントを設定する。
+   * ツール非対応の実装では何もしなくてよい。
+   *
+   * @param discord - Discord クライアントとギルド ID。
+   */
+  setDiscordClient(discord: DiscordContext): void;
 }

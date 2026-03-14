@@ -204,6 +204,7 @@ export class DiscordBot {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMembers,
       ],
     });
     this.llm.setContext({ "discord.guild.id": config.guildId });
@@ -463,6 +464,12 @@ export class DiscordBot {
     if (guild) {
       this.llm.setContext({ "discord.guild.name": guild.name });
     }
+
+    // LLM バックエンドに Discord クライアントを設定する。
+    this.llm.setDiscordClient({
+      client: this.client,
+      guildId: this.config.guildId,
+    });
 
     // スラッシュコマンドをギルドに登録する。
     const rest = new REST().setToken(this.config.discordToken);
