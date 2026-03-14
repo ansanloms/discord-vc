@@ -185,6 +185,7 @@ export class AnthropicLlm implements LanguageModel {
           messages: this.history,
         });
 
+        this.logUsage(response.usage, round);
         this.history.push({ role: "assistant", content: response.content });
 
         // tool_use 以外の終了理由 → テキストを抽出して返す。
@@ -237,6 +238,27 @@ export class AnthropicLlm implements LanguageModel {
         this.context[key] = value;
       }
     }
+  }
+
+  /**
+   * API レスポンスのトークン使用量とキャッシュヒット状況をログに出力する。
+   */
+  private logUsage(
+    usage: Anthropic.Messages.Usage,
+    round: number,
+  ): void {
+    const {
+      input_tokens,
+      output_tokens,
+      cache_creation_input_tokens,
+      cache_read_input_tokens,
+    } = usage;
+
+    log.info(
+      `usage [round ${round}]: input=${input_tokens} output=${output_tokens}` +
+        ` cache_create=${cache_creation_input_tokens ?? 0}` +
+        ` cache_read=${cache_read_input_tokens ?? 0}`,
+    );
   }
 
   /**
