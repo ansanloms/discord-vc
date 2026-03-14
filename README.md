@@ -115,10 +115,10 @@ The `Config` type uses discriminated unions (`{ type, config }`) for each backen
 
 Select backend with `LLM_TYPE` (default: `openai`).
 
-| Variable        | Default  | Description                             |
-| --------------- | -------- | --------------------------------------- |
-| `LLM_TYPE`      | `openai` | LLM backend: `openai` or `anthropic`    |
-| `SYSTEM_PROMPT` | —        | System prompt (shared by both backends) |
+| Variable             | Default                   | Description                          |
+| -------------------- | ------------------------- | ------------------------------------ |
+| `LLM_TYPE`           | `openai`                  | LLM backend: `openai` or `anthropic` |
+| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | Path to system prompt file           |
 
 #### OpenAI-compatible (`LLM_TYPE=openai`)
 

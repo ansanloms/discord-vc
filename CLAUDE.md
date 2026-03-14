@@ -29,6 +29,7 @@ deno task start
 ## プロジェクト構成
 
 ```
+config/        # システムプロンプト等の設定ファイル
 audio/         # PCM/WAV コーデックユーティリティ、音声再生キュー
 stt/           # 音声認識インターフェース + Whisper 実装
 tts/           # 音声合成インターフェース + OpenAI 互換 API 実装
@@ -75,10 +76,10 @@ main.ts        # エントリポイント — 依存の組み立て
 
 `LLM_TYPE` でバックエンドを選択する（デフォルト: `openai`）。
 
-| 変数            | デフォルト | 説明                                      |
-| --------------- | ---------- | ----------------------------------------- |
-| `LLM_TYPE`      | `openai`   | LLM バックエンド: `openai` or `anthropic` |
-| `SYSTEM_PROMPT` | —          | システムプロンプト（両バックエンド共通）  |
+| 変数                 | デフォルト                | 説明                                      |
+| -------------------- | ------------------------- | ----------------------------------------- |
+| `LLM_TYPE`           | `openai`                  | LLM バックエンド: `openai` or `anthropic` |
+| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | システムプロンプトファイルのパス          |
 
 #### OpenAI 互換（`LLM_TYPE=openai`）
 

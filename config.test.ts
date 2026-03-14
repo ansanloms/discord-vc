@@ -32,59 +32,66 @@ const REQUIRED_VARS = {
 };
 
 Deno.test("loadConfig: 必須変数がすべて設定されている場合に正しい値を返すこと", () => {
-  withEnv(
-    {
-      ...REQUIRED_VARS,
-      WHISPER_URL: "http://whisper:9999",
-      OPENAI_TTS_URL: "http://tts:7777",
-      OPENAI_TTS_API_KEY: "sk-tts",
-      OPENAI_TTS_MODEL: "tts-model",
-      OPENAI_TTS_SPEAKER: "42",
-      OPENAI_TTS_SPEED: "1.5",
-      OPENAI_LLM_URL: "http://llm:5555",
-      OPENAI_LLM_API_KEY: "sk-test",
-      OPENAI_LLM_MODEL: "test-model",
-      SYSTEM_PROMPT: "テスト用プロンプト",
-      MIN_SPEECH_MS: "300",
-      SPEECH_RMS: "150",
-      INTERRUPT_RMS: "600",
-      AUTO_LEAVE_MS: "300000",
-    },
-    () => {
-      const config = loadConfig();
-      assertEquals(config.discordToken, "test-token");
-      assertEquals(config.guildId, "123456");
-      assertEquals(config.voice, {
-        minSpeechMs: 300,
-        speechRms: 150,
-        interruptRms: 600,
-        autoLeaveMs: 300000,
-      });
-      assertEquals(config.stt, {
-        type: "whisper",
-        config: { baseUrl: "http://whisper:9999" },
-      });
-      assertEquals(config.tts, {
-        type: "openai",
-        config: {
-          baseUrl: "http://tts:7777",
-          apiKey: "sk-tts",
-          model: "tts-model",
-          voice: "42",
-          speed: 1.5,
-        },
-      });
-      assertEquals(config.llm, {
-        type: "openai",
-        config: {
-          baseUrl: "http://llm:5555",
-          apiKey: "sk-test",
-          model: "test-model",
-          systemPrompt: "テスト用プロンプト",
-        },
-      });
-    },
-  );
+  const tmpFile = Deno.makeTempFileSync({ suffix: ".md" });
+  Deno.writeTextFileSync(tmpFile, "テスト用プロンプト\n");
+
+  try {
+    withEnv(
+      {
+        ...REQUIRED_VARS,
+        WHISPER_URL: "http://whisper:9999",
+        OPENAI_TTS_URL: "http://tts:7777",
+        OPENAI_TTS_API_KEY: "sk-tts",
+        OPENAI_TTS_MODEL: "tts-model",
+        OPENAI_TTS_SPEAKER: "42",
+        OPENAI_TTS_SPEED: "1.5",
+        OPENAI_LLM_URL: "http://llm:5555",
+        OPENAI_LLM_API_KEY: "sk-test",
+        OPENAI_LLM_MODEL: "test-model",
+        SYSTEM_PROMPT_FILE: tmpFile,
+        MIN_SPEECH_MS: "300",
+        SPEECH_RMS: "150",
+        INTERRUPT_RMS: "600",
+        AUTO_LEAVE_MS: "300000",
+      },
+      () => {
+        const config = loadConfig();
+        assertEquals(config.discordToken, "test-token");
+        assertEquals(config.guildId, "123456");
+        assertEquals(config.voice, {
+          minSpeechMs: 300,
+          speechRms: 150,
+          interruptRms: 600,
+          autoLeaveMs: 300000,
+        });
+        assertEquals(config.stt, {
+          type: "whisper",
+          config: { baseUrl: "http://whisper:9999" },
+        });
+        assertEquals(config.tts, {
+          type: "openai",
+          config: {
+            baseUrl: "http://tts:7777",
+            apiKey: "sk-tts",
+            model: "tts-model",
+            voice: "42",
+            speed: 1.5,
+          },
+        });
+        assertEquals(config.llm, {
+          type: "openai",
+          config: {
+            baseUrl: "http://llm:5555",
+            apiKey: "sk-test",
+            model: "test-model",
+            systemPrompt: "テスト用プロンプト",
+          },
+        });
+      },
+    );
+  } finally {
+    Deno.removeSync(tmpFile);
+  }
 });
 
 Deno.test("loadConfig: オプション変数が未設定の場合にデフォルト値を返すこと", () => {
@@ -99,7 +106,7 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
     "OPENAI_LLM_URL",
     "OPENAI_LLM_API_KEY",
     "OPENAI_LLM_MODEL",
-    "SYSTEM_PROMPT",
+    "SYSTEM_PROMPT_FILE",
     "MIN_SPEECH_MS",
     "SPEECH_RMS",
     "INTERRUPT_RMS",
@@ -112,7 +119,10 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
   }
 
   try {
-    withEnv(REQUIRED_VARS, () => {
+    withEnv({
+      ...REQUIRED_VARS,
+      SYSTEM_PROMPT_FILE: "__nonexistent__/SYSTEM_PROMPT.md",
+    }, () => {
       const config = loadConfig();
       assertEquals(config.voice, {
         minSpeechMs: 500,
@@ -149,4 +159,40 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
       if (val !== undefined) Deno.env.set(key, val);
     }
   }
+});
+
+Deno.test("loadConfig: SYSTEM_PROMPT_FILE で指定したファイルからシステムプロンプトを読み込むこと", () => {
+  const tmpFile = Deno.makeTempFileSync({ suffix: ".md" });
+  Deno.writeTextFileSync(tmpFile, "ファイルからのプロンプト\n");
+
+  try {
+    withEnv(
+      {
+        ...REQUIRED_VARS,
+        SYSTEM_PROMPT_FILE: tmpFile,
+      },
+      () => {
+        const config = loadConfig();
+        assertEquals(
+          config.llm.config.systemPrompt,
+          "ファイルからのプロンプト",
+        );
+      },
+    );
+  } finally {
+    Deno.removeSync(tmpFile);
+  }
+});
+
+Deno.test("loadConfig: SYSTEM_PROMPT_FILE が存在しない場合に undefined を返すこと", () => {
+  withEnv(
+    {
+      ...REQUIRED_VARS,
+      SYSTEM_PROMPT_FILE: "__nonexistent__/SYSTEM_PROMPT.md",
+    },
+    () => {
+      const config = loadConfig();
+      assertEquals(config.llm.config.systemPrompt, undefined);
+    },
+  );
 });
