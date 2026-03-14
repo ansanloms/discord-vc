@@ -175,6 +175,22 @@ export class DiscordBot {
   private autoLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
+   * 発話デバウンス用バッファ。
+   * ユーザーごとに STT 結果テキストを溜め、一定時間後にまとめて LLM に投げる。
+   */
+  private readonly speechDebounce = new Map<string, {
+    texts: string[];
+    displayName: string;
+    timer: ReturnType<typeof setTimeout>;
+  }>();
+
+  /**
+   * デバウンス待機時間（ミリ秒）。
+   * この時間内に同一ユーザーの追加発話があればまとめる。
+   */
+  private static readonly DEBOUNCE_MS = 500;
+
+  /**
    * 共有の Opus デコーダインスタンス。
    * 注意: opusscript はインスタンスごとにコーデック状態を持つため、
    * 複数ユーザーが同時に発話すると音声にアーティファクトが生じうる。
@@ -682,14 +698,65 @@ export class DiscordBot {
       const guild = this.client.guilds.cache.get(this.config.guildId);
       const member = guild?.members.cache.get(userId);
       const displayName = member?.displayName ?? userId;
-      const formatted = formatUserMessage(
-        this.config.messageTemplate,
-        text,
-        displayName,
-        userId,
-      );
 
       log.info(`transcript from ${displayName} (${userId}): ${text}`);
+
+      // デバウンス: 連続発話をまとめてから LLM に投げる。
+      this.enqueueSpeech(userId, displayName, text);
+    } catch (e: unknown) {
+      log.error(`pipeline error for user ${userId}:`, e);
+    }
+  }
+
+  /**
+   * 発話テキストをデバウンスバッファに追加する。
+   * DEBOUNCE_MS 以内に同一ユーザーの追加発話があればまとめ、
+   * タイムアウト後にまとめて LLM → TTS パイプラインに投げる。
+   */
+  private enqueueSpeech(
+    userId: string,
+    displayName: string,
+    text: string,
+  ): void {
+    const existing = this.speechDebounce.get(userId);
+    if (existing) {
+      clearTimeout(existing.timer);
+      existing.texts.push(text);
+      existing.timer = setTimeout(
+        () => this.flushSpeech(userId),
+        DiscordBot.DEBOUNCE_MS,
+      );
+    } else {
+      const timer = setTimeout(
+        () => this.flushSpeech(userId),
+        DiscordBot.DEBOUNCE_MS,
+      );
+      this.speechDebounce.set(userId, { texts: [text], displayName, timer });
+    }
+  }
+
+  /**
+   * デバウンスバッファをフラッシュし、LLM → TTS パイプラインを実行する。
+   */
+  private async flushSpeech(userId: string): Promise<void> {
+    const entry = this.speechDebounce.get(userId);
+    this.speechDebounce.delete(userId);
+    if (!entry || entry.texts.length === 0) {
+      return;
+    }
+
+    const mergedText = entry.texts.join(" ");
+    const formatted = formatUserMessage(
+      this.config.messageTemplate,
+      mergedText,
+      entry.displayName,
+      userId,
+    );
+
+    try {
+      log.info(
+        `sending to LLM (${entry.texts.length} segment(s)): ${mergedText}`,
+      );
       const reply = await this.llm.chat(formatted);
       if (!reply) {
         return;

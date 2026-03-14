@@ -10,6 +10,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   MessageParam,
+  TextBlockParam,
   ToolResultBlockParam,
   ToolUnion,
   ToolUseBlock,
@@ -93,9 +94,16 @@ export class AnthropicLlm implements LanguageModel {
   private readonly history: MessageParam[] = [];
   private discord?: DiscordContext;
 
+  /**
+   * chat() の直列化用 mutex。
+   * 前の呼び出しが完了するまで次の呼び出しを待機させる。
+   */
+  private chatMutex: Promise<void> = Promise.resolve();
+
   constructor(config: AnthropicLlmConfig) {
     this.client = new Anthropic({
       apiKey: config.apiKey,
+      maxRetries: 5,
     });
     this.model = config.model;
     this.systemPromptTemplate = config.systemPrompt;
@@ -130,8 +138,24 @@ export class AnthropicLlm implements LanguageModel {
 
   /**
    * @inheritdoc
+   *
+   * mutex で直列化し、並行呼び出しによる履歴破壊を防ぐ。
    */
-  async chat(userMessage: string): Promise<string> {
+  chat(userMessage: string): Promise<string> {
+    const prev = this.chatMutex;
+    let resolve: () => void;
+    this.chatMutex = new Promise<void>((r) => {
+      resolve = r;
+    });
+    return prev.then(() => this.chatInternal(userMessage)).finally(() =>
+      resolve()
+    );
+  }
+
+  /**
+   * chat() の実体。mutex によって直列実行が保証される。
+   */
+  private async chatInternal(userMessage: string): Promise<string> {
     this.history.push({ role: "user", content: userMessage });
 
     // 直近のターンのみ保持するよう履歴をトリミングする。
@@ -141,14 +165,13 @@ export class AnthropicLlm implements LanguageModel {
 
     try {
       for (let round = 0; round <= this.maxToolRounds; round++) {
-        const system = this.systemPromptTemplate
-          ? replaceTemplateVariables(this.systemPromptTemplate, this.context)
-          : undefined;
+        const system = this.buildSystemPrompt();
+        const tools = this.buildToolsWithCache();
         const response = await this.client.messages.create({
           model: this.model,
           max_tokens: this.maxTokens,
           ...(system ? { system } : {}),
-          tools: this.tools,
+          tools,
           messages: this.history,
         });
 
@@ -204,6 +227,42 @@ export class AnthropicLlm implements LanguageModel {
         this.context[key] = value;
       }
     }
+  }
+
+  /**
+   * システムプロンプトを構築する。
+   * Prompt Caching のため TextBlockParam 配列として返し、
+   * cache_control を付与する。
+   */
+  private buildSystemPrompt(): TextBlockParam[] | undefined {
+    if (!this.systemPromptTemplate) {
+      return undefined;
+    }
+    const text = replaceTemplateVariables(
+      this.systemPromptTemplate,
+      this.context,
+    );
+    return [{
+      type: "text",
+      text,
+      cache_control: { type: "ephemeral" },
+    }];
+  }
+
+  /**
+   * ツール定義を構築する。
+   * 最後のツールに cache_control を付与し、
+   * tools 定義全体がキャッシュされるようにする。
+   */
+  private buildToolsWithCache(): ToolUnion[] {
+    if (this.tools.length === 0) {
+      return this.tools;
+    }
+    return this.tools.map((tool, i) =>
+      i === this.tools.length - 1
+        ? { ...tool, cache_control: { type: "ephemeral" as const } }
+        : tool
+    );
   }
 
   /**

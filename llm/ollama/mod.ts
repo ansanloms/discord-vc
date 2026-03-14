@@ -74,6 +74,12 @@ export class OllamaLlm implements LanguageModel {
   private readonly history: Message[] = [];
   private discord?: DiscordContext;
 
+  /**
+   * chat() の直列化用 mutex。
+   * 前の呼び出しが完了するまで次の呼び出しを待機させる。
+   */
+  private chatMutex: Promise<void> = Promise.resolve();
+
   constructor(config: OllamaLlmConfig) {
     this.client = new Ollama({
       host: config.host,
@@ -109,8 +115,24 @@ export class OllamaLlm implements LanguageModel {
 
   /**
    * @inheritdoc
+   *
+   * mutex で直列化し、並行呼び出しによる履歴破壊を防ぐ。
    */
-  async chat(userMessage: string): Promise<string> {
+  chat(userMessage: string): Promise<string> {
+    const prev = this.chatMutex;
+    let resolve: () => void;
+    this.chatMutex = new Promise<void>((r) => {
+      resolve = r;
+    });
+    return prev.then(() => this.chatInternal(userMessage)).finally(() =>
+      resolve()
+    );
+  }
+
+  /**
+   * chat() の実体。mutex によって直列実行が保証される。
+   */
+  private async chatInternal(userMessage: string): Promise<string> {
     this.history.push({ role: "user", content: userMessage });
 
     // 直近のターンのみ保持するよう履歴をトリミングする。
