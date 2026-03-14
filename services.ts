@@ -48,7 +48,7 @@ function createTts(config: Config["tts"]): TextToSpeech {
   }
 }
 
-function createLlm(config: Config["llm"]): LanguageModel {
+export function createLlm(config: Config["llm"]): LanguageModel {
   switch (config.type) {
     case "openai":
       return new OpenAiLlm(config.config);

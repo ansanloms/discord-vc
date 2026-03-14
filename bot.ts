@@ -39,9 +39,20 @@ import { createLogger } from "./logger.ts";
 import { replaceTemplateVariables } from "./llm/template.ts";
 import { calcRms, createOpusDecoder } from "./audio/codec.ts";
 import type { Config } from "./config.ts";
+import { buildLlmConfig } from "./config.ts";
+import { createLlm } from "./services.ts";
 import type { SpeechToText } from "./stt/types.ts";
 import type { LanguageModel } from "./llm/types.ts";
 import type { VoicePlayer } from "./audio/player.ts";
+
+/**
+ * LLM バックエンドの選択肢。
+ */
+const LLM_CHOICES = [
+  { name: "openai", value: "openai" },
+  { name: "anthropic", value: "anthropic" },
+  { name: "ollama", value: "ollama" },
+] as const;
 
 /**
  * /aivc スラッシュコマンドの定義。
@@ -53,6 +64,13 @@ const vcCommand = new SlashCommandBuilder()
     sub
       .setName("join")
       .setDescription("Join a voice channel")
+      .addStringOption((opt) =>
+        opt
+          .setName("llm")
+          .setDescription("LLM backend to use")
+          .setRequired(false)
+          .addChoices(...LLM_CHOICES)
+      )
   )
   .addSubcommand((sub) =>
     sub
@@ -210,9 +228,9 @@ export class DiscordBot {
    * @param voicePlayer - TTS 合成・再生キュー。
    */
   constructor(
-    private readonly config: Config,
+    private config: Config,
     private readonly stt: SpeechToText,
-    private readonly llm: LanguageModel,
+    private llm: LanguageModel,
     private readonly voicePlayer: VoicePlayer,
   ) {
     this.minPcmBytes = msToBytes(config.voice.minSpeechMs);
@@ -349,8 +367,17 @@ export class DiscordBot {
           return;
         }
         await interaction.deferReply();
+
+        // LLM バックエンドの切り替え。
+        const llmType = interaction.options.getString("llm");
+        if (llmType) {
+          this.switchLlm(llmType);
+        }
+
         await this.joinChannel(interaction.channelId);
-        await interaction.editReply("Joined VC");
+
+        const activeLlm = llmType ?? this.config.llm.type;
+        await interaction.editReply(`Joined VC (LLM: ${activeLlm})`);
         return;
       }
 
@@ -495,6 +522,37 @@ export class DiscordBot {
       { body: [vcCommand.toJSON()] },
     );
     log.info("slash commands registered");
+  }
+
+  /**
+   * LLM バックエンドを切り替える。
+   * 環境変数から対応する設定を読み込み、新しいインスタンスを生成して差し替える。
+   * 会話履歴はリセットされる。
+   */
+  private switchLlm(llmType: string): void {
+    const llmConfig = buildLlmConfig(llmType);
+    this.llm = createLlm(llmConfig);
+    this.config = { ...this.config, llm: llmConfig };
+
+    // コンテキストを再設定する。
+    this.llm.setContext({ "discord.guild.id": this.config.guildId });
+    const guild = this.client.guilds.cache.get(this.config.guildId);
+    if (guild) {
+      this.llm.setContext({ "discord.guild.name": guild.name });
+    }
+    this.llm.setDiscordClient({
+      client: this.client,
+      guildId: this.config.guildId,
+    });
+    if (this.currentChannelId) {
+      const channel = guild?.channels.cache.get(this.currentChannelId);
+      this.llm.setContext({
+        "discord.channel.current.id": this.currentChannelId,
+        "discord.channel.current.name": channel?.name ?? this.currentChannelId,
+      });
+    }
+
+    log.info(`LLM switched to ${llmType}`);
   }
 
   /**

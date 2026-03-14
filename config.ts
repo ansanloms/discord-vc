@@ -103,8 +103,10 @@ function loadSystemPrompt(): string | undefined {
  * LLM_TYPE 環境変数に基づいて LLM 設定を構築する。
  * 未指定または "openai" なら OpenAI 互換、"anthropic" なら Anthropic SDK を使用する。
  */
-function buildLlmConfig(): LlmConfig {
-  const llmType = Deno.env.get("LLM_TYPE") ?? "openai";
+export function buildLlmConfig(
+  llmType?: string,
+): LlmConfig {
+  llmType = llmType ?? Deno.env.get("LLM_TYPE") ?? "openai";
 
   switch (llmType) {
     case "anthropic":
