@@ -367,17 +367,17 @@ export class DiscordBot {
           return;
         }
         await interaction.deferReply();
+        await this.joinChannel(interaction.channelId);
 
-        // LLM バックエンドの切り替え。
+        // LLM バックエンドの切り替え（VC 参加成功後に行う）。
         const llmType = interaction.options.getString("llm");
         if (llmType) {
           this.switchLlm(llmType);
         }
 
-        await this.joinChannel(interaction.channelId);
-
-        const activeLlm = llmType ?? this.config.llm.type;
-        await interaction.editReply(`Joined VC (LLM: ${activeLlm})`);
+        await interaction.editReply(
+          `Joined VC (LLM: ${this.config.llm.type})`,
+        );
         return;
       }
 
