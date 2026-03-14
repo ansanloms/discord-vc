@@ -26,12 +26,18 @@ const log = createLogger("llm:anthropic");
 const MAX_HISTORY = 20;
 
 /**
+ * ツール実行結果の型。
+ * 文字列またはコンテンツブロック配列（画像を含めたい場合など）を返せる。
+ */
+export type ToolExecutorResult = NonNullable<ToolResultBlockParam["content"]>;
+
+/**
  * カスタムツールの実行関数。
- * ツール入力を受け取り、結果文字列を返す。
+ * ツール入力を受け取り、結果を返す。
  */
 export type ToolExecutor = (
   input: Record<string, unknown>,
-) => Promise<string>;
+) => Promise<ToolExecutorResult>;
 
 /**
  * web search のユーザー位置情報。
@@ -113,8 +119,8 @@ export class AnthropicLlm implements LanguageModel {
   private readonly systemPromptTemplate?: string;
   private context: Record<string, string> = {};
   private readonly maxTokens: number;
-  private readonly tools: (Tool | Record<string, unknown>)[];
-  private readonly customToolExecutors: Record<string, ToolExecutor>;
+  private tools: (Tool | Record<string, unknown>)[];
+  private customToolExecutors: Record<string, ToolExecutor>;
   private readonly maxToolRounds: number;
   private readonly history: MessageParam[] = [];
 
@@ -151,6 +157,18 @@ export class AnthropicLlm implements LanguageModel {
     if (config.customTools) {
       this.tools.push(...config.customTools);
     }
+  }
+
+  /**
+   * ツール定義と executor を追加する。
+   * 外部から動的にツールを注入するために使用する。
+   *
+   * @param tools - 追加するツール定義の配列。
+   * @param executors - ツール名をキーとした executor マップ。
+   */
+  addTools(tools: Tool[], executors: Record<string, ToolExecutor>): void {
+    this.tools.push(...tools);
+    Object.assign(this.customToolExecutors, executors);
   }
 
   /**

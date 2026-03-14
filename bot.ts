@@ -42,6 +42,11 @@ import type { Config } from "./config.ts";
 import type { SpeechToText } from "./stt/types.ts";
 import type { LanguageModel } from "./llm/types.ts";
 import type { VoicePlayer } from "./audio/player.ts";
+import { AnthropicLlm } from "./llm/anthropic.ts";
+import {
+  createDiscordToolExecutors,
+  discordTools,
+} from "./llm/anthropic/tools/discord.ts";
 
 /**
  * /aivc スラッシュコマンドの定義。
@@ -204,6 +209,7 @@ export class DiscordBot {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildVoiceStates,
+        GatewayIntentBits.GuildMembers,
       ],
     });
     this.llm.setContext({ "discord.guild.id": config.guildId });
@@ -462,6 +468,16 @@ export class DiscordBot {
     const guild = this.client.guilds.cache.get(this.config.guildId);
     if (guild) {
       this.llm.setContext({ "discord.guild.name": guild.name });
+    }
+
+    // Anthropic LLM の場合、Discord 操作ツールを注入する。
+    if (this.llm instanceof AnthropicLlm) {
+      const executors = createDiscordToolExecutors(
+        this.client,
+        this.config.guildId,
+      );
+      this.llm.addTools(discordTools, executors);
+      log.info("discord tools registered");
     }
 
     // スラッシュコマンドをギルドに登録する。
