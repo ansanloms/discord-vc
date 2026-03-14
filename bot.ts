@@ -113,6 +113,12 @@ export interface VoiceThresholds {
    * -1 の場合は自動退出しない。
    */
   autoLeaveMs: number;
+
+  /**
+   * 発話デバウンス待機時間（ミリ秒）。
+   * この時間内に同一ユーザーの追加発話があればまとめて LLM に投げる。
+   */
+  speechDebounceMs: number;
 }
 
 const log = createLogger("bot");
@@ -183,12 +189,6 @@ export class DiscordBot {
     displayName: string;
     timer: ReturnType<typeof setTimeout>;
   }>();
-
-  /**
-   * デバウンス待機時間（ミリ秒）。
-   * この時間内に同一ユーザーの追加発話があればまとめる。
-   */
-  private static readonly DEBOUNCE_MS = 500;
 
   /**
    * 共有の Opus デコーダインスタンス。
@@ -719,18 +719,21 @@ export class DiscordBot {
     text: string,
   ): void {
     const existing = this.speechDebounce.get(userId);
+    const scheduleFlush = () =>
+      setTimeout(
+        () =>
+          this.flushSpeech(userId).catch((e) =>
+            log.error(`flush error for user ${userId}:`, e)
+          ),
+        this.config.voice.speechDebounceMs,
+      );
+
     if (existing) {
       clearTimeout(existing.timer);
       existing.texts.push(text);
-      existing.timer = setTimeout(
-        () => this.flushSpeech(userId),
-        DiscordBot.DEBOUNCE_MS,
-      );
+      existing.timer = scheduleFlush();
     } else {
-      const timer = setTimeout(
-        () => this.flushSpeech(userId),
-        DiscordBot.DEBOUNCE_MS,
-      );
+      const timer = scheduleFlush();
       this.speechDebounce.set(userId, { texts: [text], displayName, timer });
     }
   }

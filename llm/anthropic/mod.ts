@@ -89,6 +89,7 @@ export class AnthropicLlm implements LanguageModel {
   private context: Record<string, string> = {};
   private readonly maxTokens: number;
   private readonly tools: ToolUnion[];
+  private readonly cachedTools: ToolUnion[];
   private readonly toolExecutors: Record<string, ToolExecutor>;
   private readonly maxToolRounds: number;
   private readonly history: MessageParam[] = [];
@@ -116,6 +117,14 @@ export class AnthropicLlm implements LanguageModel {
       webSearch.tool,
       ...discordTools.map((mod) => mod.tool),
     ];
+
+    // cache_control 付きのツール配列を事前構築する。
+    // 最後のツールに breakpoint を置くことで tools 全体がキャッシュされる。
+    this.cachedTools = this.tools.map((tool, i) =>
+      i === this.tools.length - 1
+        ? { ...tool, cache_control: { type: "ephemeral" as const } }
+        : tool
+    );
 
     this.toolExecutors = {};
     for (const mod of discordTools) {
@@ -164,14 +173,15 @@ export class AnthropicLlm implements LanguageModel {
     }
 
     try {
+      // system prompt と tools はラウンドトリップ間で不変なのでループ外で構築する。
+      const system = this.buildSystemPrompt();
+
       for (let round = 0; round <= this.maxToolRounds; round++) {
-        const system = this.buildSystemPrompt();
-        const tools = this.buildToolsWithCache();
         const response = await this.client.messages.create({
           model: this.model,
           max_tokens: this.maxTokens,
           ...(system ? { system } : {}),
-          tools,
+          tools: this.cachedTools,
           messages: this.history,
         });
 
@@ -247,22 +257,6 @@ export class AnthropicLlm implements LanguageModel {
       text,
       cache_control: { type: "ephemeral" },
     }];
-  }
-
-  /**
-   * ツール定義を構築する。
-   * 最後のツールに cache_control を付与し、
-   * tools 定義全体がキャッシュされるようにする。
-   */
-  private buildToolsWithCache(): ToolUnion[] {
-    if (this.tools.length === 0) {
-      return this.tools;
-    }
-    return this.tools.map((tool, i) =>
-      i === this.tools.length - 1
-        ? { ...tool, cache_control: { type: "ephemeral" as const } }
-        : tool
-    );
   }
 
   /**

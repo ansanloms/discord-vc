@@ -170,6 +170,9 @@ export function loadConfig(): Config {
       speechRms: Number(Deno.env.get("SPEECH_RMS") ?? "200"),
       interruptRms: Number(Deno.env.get("INTERRUPT_RMS") ?? "500"),
       autoLeaveMs: Number(Deno.env.get("AUTO_LEAVE_MS") ?? "600000"),
+      speechDebounceMs: Number(
+        Deno.env.get("SPEECH_DEBOUNCE_MS") ?? "500",
+      ),
     },
     stt: {
       type: "whisper",
