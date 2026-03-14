@@ -47,6 +47,8 @@ import {
   createDiscordToolExecutors,
   discordTools,
 } from "./llm/anthropic/tools/discord.ts";
+import { OpenAiLlm } from "./llm/openai.ts";
+import { createDiscordTools } from "./llm/openai/tools/discord.ts";
 
 /**
  * /aivc スラッシュコマンドの定義。
@@ -470,14 +472,18 @@ export class DiscordBot {
       this.llm.setContext({ "discord.guild.name": guild.name });
     }
 
-    // Anthropic LLM の場合、Discord 操作ツールを注入する。
-    if (this.llm instanceof AnthropicLlm) {
+    // LLM バックエンドに応じて Discord 操作ツールを注入する。
+    if (this.llm instanceof OpenAiLlm) {
+      const tools = createDiscordTools(this.client, this.config.guildId);
+      this.llm.addTools(tools);
+      log.info("discord tools registered (openai)");
+    } else if (this.llm instanceof AnthropicLlm) {
       const executors = createDiscordToolExecutors(
         this.client,
         this.config.guildId,
       );
       this.llm.addTools(discordTools, executors);
-      log.info("discord tools registered");
+      log.info("discord tools registered (anthropic)");
     }
 
     // スラッシュコマンドをギルドに登録する。
