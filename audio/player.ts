@@ -121,7 +121,7 @@ export class VoicePlayer {
 
   /**
    * 処理中トーンのループ再生を開始する。
-   * 即座に 1 回再生し、以降 0.75 秒間隔でキューに追加する。
+   * 即座に 1 回再生し、以降 0.85 秒間隔でキューに追加する。
    * 既にループ中の場合は何もしない。
    */
   startThinking(): void {
@@ -135,7 +135,7 @@ export class VoicePlayer {
     this.thinkingTimer = setInterval(() => {
       this.queue.push(this.thinkingTone);
       if (!this.isPlaying) this.playNext();
-    }, 750);
+    }, 850);
   }
 
   /**
