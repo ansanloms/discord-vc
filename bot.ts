@@ -136,6 +136,12 @@ export interface VoiceThresholds {
    * この時間内に同一ユーザーの追加発話があればまとめて LLM に投げる。
    */
   speechDebounceMs: number;
+
+  /**
+   * 通知トーン（処理中・エラー）の有効/無効。
+   * false の場合、処理中トーンとエラートーンは再生されない。
+   */
+  notificationTone: boolean;
 }
 
 const log = createLogger("bot");

@@ -164,6 +164,8 @@ export function loadConfig(): Config {
       speechDebounceMs: Number(
         Deno.env.get("SPEECH_DEBOUNCE_MS") ?? "500",
       ),
+      notificationTone:
+        (Deno.env.get("NOTIFICATION_TONE") ?? "true") === "true",
     },
     stt: {
       type: "whisper",

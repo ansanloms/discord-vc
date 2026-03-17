@@ -108,6 +108,7 @@ main.ts        # エントリポイント — 依存の組み立て
 | `INTERRUPT_RMS`      | `500`      | AI の再生を中断する最小 RMS 振幅           |
 | `AUTO_LEAVE_MS`      | `600000`   | 自動退出までの時間（ms）。-1 で無効        |
 | `SPEECH_DEBOUNCE_MS` | `500`      | 連続発話をまとめるデバウンス待機時間（ms） |
+| `NOTIFICATION_TONE`  | `true`     | 通知トーン（処理中・エラー）の有効/無効    |
 
 ### その他
 

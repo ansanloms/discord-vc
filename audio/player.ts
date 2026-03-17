@@ -75,9 +75,16 @@ export class VoicePlayer {
   private readonly errorTone: Buffer = generateErrorTone();
 
   /**
-   * @param tts - 音声チャンクの合成に使う TTS バックエンド。
+   * 通知トーンが有効かどうか。
    */
-  constructor(private readonly tts: TextToSpeech) {
+  private readonly toneEnabled: boolean;
+
+  /**
+   * @param tts - 音声チャンクの合成に使う TTS バックエンド。
+   * @param toneEnabled - 通知トーンの有効/無効（デフォルト: true）。
+   */
+  constructor(private readonly tts: TextToSpeech, toneEnabled: boolean = true) {
+    this.toneEnabled = toneEnabled;
     this.player = createAudioPlayer();
 
     this.player.on(AudioPlayerStatus.Playing, () => {
@@ -125,6 +132,7 @@ export class VoicePlayer {
    * 既にループ中の場合は何もしない。
    */
   startThinking(): void {
+    if (!this.toneEnabled) return;
     if (this.thinkingTimer) return;
 
     log.debug("thinking tone started");
@@ -164,6 +172,7 @@ export class VoicePlayer {
    * 現在の再生キューに追加される。
    */
   playErrorTone(): void {
+    if (!this.toneEnabled) return;
     log.debug("playing error tone");
     this.stopThinking();
     this.queue.push(this.errorTone);
