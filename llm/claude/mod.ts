@@ -229,7 +229,9 @@ export class ClaudeLlm implements LanguageModel {
 
         if (clientToolUseBlocks.length === 0) {
           // サーバーサイドツールのみだった場合。
-          return;
+          // API 側で実行済みなのでクライアントで解決するものはないが、
+          // モデルがまだ最終回答を出していない可能性があるためループを継続する。
+          continue;
         }
 
         const toolResults = await this.resolveToolCalls(clientToolUseBlocks);

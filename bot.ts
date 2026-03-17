@@ -464,20 +464,22 @@ export class DiscordBot {
         userId,
       );
 
-      const chunks: string[] = [];
+      let lastChunk: string | undefined;
       for await (const chunk of this.llm.chat(formatted)) {
         if (!chunk) continue;
         log.info(`reply chunk: ${chunk}`);
-        chunks.push(chunk);
+        lastChunk = chunk;
         await this.voicePlayer.speak(chunk);
       }
 
-      if (chunks.length === 0) {
+      if (!lastChunk) {
         await interaction.editReply("(No response)");
         return;
       }
 
-      await interaction.editReply(chunks.join("\n"));
+      // 中間応答（「調べるね」等）は TTS で再生済みなので、
+      // Discord のテキスト表示には最終応答のみ表示する。
+      await interaction.editReply(lastChunk);
     } catch (e: unknown) {
       log.error("text pipeline error:", e);
       await interaction.editReply("An error occurred.").catch(() => {});
