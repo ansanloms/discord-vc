@@ -117,22 +117,37 @@ export class OllamaLlm implements LanguageModel {
    * @inheritdoc
    *
    * mutex で直列化し、並行呼び出しによる履歴破壊を防ぐ。
+   * generator は lazy なので mutex の取得は eager に行い、
+   * generator の完了時に finally で解放する。
    */
-  chat(userMessage: string): Promise<string> {
+  chat(userMessage: string): AsyncGenerator<string> {
     const prev = this.chatMutex;
     let resolve!: () => void;
     this.chatMutex = new Promise<void>((r) => {
       resolve = r;
     });
-    return prev.then(() => this.chatInternal(userMessage)).finally(() =>
-      resolve()
-    );
+
+    // chatInternal は generator なのでここでは本体は実行されない。
+    const gen = this.chatInternal(userMessage);
+
+    async function* inner() {
+      await prev;
+      try {
+        yield* gen;
+      } finally {
+        resolve();
+      }
+    }
+
+    return inner();
   }
 
   /**
    * chat() の実体。mutex によって直列実行が保証される。
+   * ツールラウンド中に中間テキストがあれば yield し、
+   * 最終応答テキストも yield する。
    */
-  private async chatInternal(userMessage: string): Promise<string> {
+  private async *chatInternal(userMessage: string): AsyncGenerator<string> {
     this.history.push({ role: "user", content: userMessage });
 
     // 直近のターンのみ保持するよう履歴をトリミングする。
@@ -164,13 +179,19 @@ export class OllamaLlm implements LanguageModel {
 
         this.history.push(response.message);
 
+        const content = response.message.content ?? "";
+
         // tool_calls がなければテキストを返す。
         if (
           !response.message.tool_calls ||
           response.message.tool_calls.length === 0
         ) {
-          return response.message.content ?? "";
+          if (content) yield content;
+          return;
         }
+
+        // ツールラウンド中の中間テキストを yield する。
+        if (content) yield content;
 
         // ツール呼び出しを実行して結果を履歴に追加する。
         for (const toolCall of response.message.tool_calls) {
@@ -219,14 +240,12 @@ export class OllamaLlm implements LanguageModel {
       }
 
       log.warn("tool use round limit reached");
-      return "";
     } catch (e: unknown) {
       log.error("API error:", e);
       // このターンで追加されたメッセージをすべて削除する。
       // 外部から clearHistory() 等で配列が縮小されていた場合に
       // ホール（undefined）が生じないよう、膨張させない。
       this.history.length = Math.min(historyLen, this.history.length);
-      return "";
     }
   }
 

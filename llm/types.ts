@@ -24,13 +24,17 @@ export interface DiscordContext {
  */
 export interface LanguageModel {
   /**
-   * ユーザーメッセージを送信し、モデルの返答を取得する。
+   * ユーザーメッセージを送信し、モデルの返答を逐次取得する。
    * 実装側で会話履歴を管理することを期待する。
    *
+   * ツール呼び出しを伴う場合、中間応答（例: 「調べます」）と
+   * 最終応答が順に yield される。ツールなしの場合は 1 回の yield で完了する。
+   * エラー時は何も yield せずに終了する。
+   *
    * @param message - ユーザーのメッセージ。
-   * @returns モデルの返答。失敗時は空文字列。
+   * @returns 応答テキストを逐次返す AsyncGenerator。
    */
-  chat(message: string): Promise<string>;
+  chat(message: string): AsyncGenerator<string>;
 
   /**
    * 会話履歴をクリアする。

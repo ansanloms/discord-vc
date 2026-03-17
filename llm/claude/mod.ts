@@ -10,6 +10,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   MessageParam,
+  TextBlock,
   TextBlockParam,
   ToolResultBlockParam,
   ToolUnion,
@@ -149,22 +150,37 @@ export class ClaudeLlm implements LanguageModel {
    * @inheritdoc
    *
    * mutex で直列化し、並行呼び出しによる履歴破壊を防ぐ。
+   * generator は lazy なので mutex の取得は eager に行い、
+   * generator の完了（正常終了・例外・途中離脱）時に finally で解放する。
    */
-  chat(userMessage: string): Promise<string> {
+  chat(userMessage: string): AsyncGenerator<string> {
     const prev = this.chatMutex;
     let resolve!: () => void;
     this.chatMutex = new Promise<void>((r) => {
       resolve = r;
     });
-    return prev.then(() => this.chatInternal(userMessage)).finally(() =>
-      resolve()
-    );
+
+    // chatInternal は generator なのでここでは本体は実行されない。
+    const gen = this.chatInternal(userMessage);
+
+    async function* inner() {
+      await prev;
+      try {
+        yield* gen;
+      } finally {
+        resolve();
+      }
+    }
+
+    return inner();
   }
 
   /**
    * chat() の実体。mutex によって直列実行が保証される。
+   * ツールラウンド中に中間テキストがあれば yield し、
+   * 最終応答テキストも yield する。
    */
-  private async chatInternal(userMessage: string): Promise<string> {
+  private async *chatInternal(userMessage: string): AsyncGenerator<string> {
     this.history.push({ role: "user", content: userMessage });
 
     // 直近のターンのみ保持するよう履歴をトリミングする。
@@ -192,10 +208,18 @@ export class ClaudeLlm implements LanguageModel {
         this.logUsage(response.usage, round);
         this.history.push({ role: "assistant", content: response.content });
 
+        const text = this.extractText(response.content);
+
         // tool_use 以外の終了理由 → テキストを抽出して返す。
         if (response.stop_reason !== "tool_use") {
-          return this.extractText(response.content);
+          if (text) {
+            yield text;
+          }
+          return;
         }
+
+        // ツールラウンド中の中間テキスト（例: 「調べます」）を yield する。
+        if (text) yield text;
 
         // クライアントサイドの tool_use ブロックのみ解決が必要。
         // server_tool_use（web_search 等）はレスポンスに結果が含まれている。
@@ -206,7 +230,9 @@ export class ClaudeLlm implements LanguageModel {
 
         if (clientToolUseBlocks.length === 0) {
           // サーバーサイドツールのみだった場合。
-          return this.extractText(response.content);
+          // API 側で実行済みなのでクライアントで解決するものはないが、
+          // モデルがまだ最終回答を出していない可能性があるためループを継続する。
+          continue;
         }
 
         const toolResults = await this.resolveToolCalls(clientToolUseBlocks);
@@ -214,14 +240,12 @@ export class ClaudeLlm implements LanguageModel {
       }
 
       log.warn("tool use round limit reached");
-      return "";
     } catch (e: unknown) {
       log.error("API error:", e);
       // このターンで追加されたメッセージをすべて削除する。
       // 外部から clearHistory() 等で配列が縮小されていた場合に
       // ホール（undefined）が生じないよう、膨張させない。
       this.history.length = Math.min(historyLen, this.history.length);
-      return "";
     }
   }
 
@@ -303,8 +327,8 @@ export class ClaudeLlm implements LanguageModel {
     content: Anthropic.ContentBlock[],
   ): string {
     return content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as { type: "text"; text: string }).text)
+      .filter((b): b is TextBlock => b.type === "text")
+      .map((b) => b.text)
       .join("");
   }
 

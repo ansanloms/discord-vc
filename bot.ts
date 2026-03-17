@@ -447,6 +447,7 @@ export class DiscordBot {
 
   /**
    * テキストメッセージを LLM → TTS パイプラインに通す。
+   * LLM からの中間応答・最終応答を逐次 TTS に流す。
    */
   private async onTextMessage(
     content: string,
@@ -462,15 +463,23 @@ export class DiscordBot {
         displayName,
         userId,
       );
-      const reply = await this.llm.chat(formatted);
-      if (!reply) {
+
+      let lastChunk: string | undefined;
+      for await (const chunk of this.llm.chat(formatted)) {
+        if (!chunk) continue;
+        log.info(`reply chunk: ${chunk}`);
+        lastChunk = chunk;
+        await this.voicePlayer.speak(chunk);
+      }
+
+      if (!lastChunk) {
         await interaction.editReply("(No response)");
         return;
       }
 
-      log.info(`reply: ${reply}`);
-      await interaction.editReply(reply);
-      await this.voicePlayer.speak(reply);
+      // 中間応答（「調べるね」等）は TTS で再生済みなので、
+      // Discord のテキスト表示には最終応答のみ表示する。
+      await interaction.editReply(lastChunk);
     } catch (e: unknown) {
       log.error("text pipeline error:", e);
       await interaction.editReply("An error occurred.").catch(() => {});
@@ -813,13 +822,11 @@ export class DiscordBot {
       log.info(
         `sending to LLM (${entry.texts.length} segment(s)): ${mergedText}`,
       );
-      const reply = await this.llm.chat(formatted);
-      if (!reply) {
-        return;
+      for await (const chunk of this.llm.chat(formatted)) {
+        if (!chunk) continue;
+        log.info(`reply chunk: ${chunk}`);
+        await this.voicePlayer.speak(chunk);
       }
-
-      log.info(`reply: ${reply}`);
-      await this.voicePlayer.speak(reply);
     } catch (e: unknown) {
       log.error(`pipeline error for user ${userId}:`, e);
     }
