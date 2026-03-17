@@ -16,6 +16,7 @@ import {
 import type { AudioPlayer } from "@discordjs/voice";
 import { createLogger } from "../logger.ts";
 import type { TextToSpeech } from "../tts/types.ts";
+import { generateErrorTone, generateThinkingTone } from "./tones.ts";
 
 const log = createLogger("tts");
 
@@ -53,6 +54,21 @@ export class VoicePlayer {
   public isSpeaking = false;
 
   /**
+   * 処理中トーンのループタイマー。null ならループ停止中。
+   */
+  private thinkingTimer: ReturnType<typeof setInterval> | null = null;
+
+  /**
+   * 処理中トーンの WAV バイト列（キャッシュ）。
+   */
+  private readonly thinkingTone: Buffer = generateThinkingTone();
+
+  /**
+   * エラートーンの WAV バイト列（キャッシュ）。
+   */
+  private readonly errorTone: Buffer = generateErrorTone();
+
+  /**
    * @param tts - 音声チャンクの合成に使う TTS バックエンド。
    */
   constructor(private readonly tts: TextToSpeech) {
@@ -85,10 +101,60 @@ export class VoicePlayer {
    * 再生を即座に停止し、キュー内の全エントリをクリアする。
    */
   interrupt(): void {
+    this.stopThinking();
     this.player.stop();
     this.queue.length = 0;
     this.isPlaying = false;
     this.isSpeaking = false;
+  }
+
+  /**
+   * 処理中トーンのループ再生を開始する。
+   * 即座に 1 回再生し、以降 0.75 秒間隔でキューに追加する。
+   * 既にループ中の場合は何もしない。
+   */
+  startThinking(): void {
+    if (this.thinkingTimer) return;
+
+    log.debug("thinking tone started");
+    this.queue.push(this.thinkingTone);
+    if (!this.isPlaying) this.playNext();
+
+    this.thinkingTimer = setInterval(() => {
+      this.queue.push(this.thinkingTone);
+      if (!this.isPlaying) this.playNext();
+    }, 750);
+  }
+
+  /**
+   * 処理中トーンのループ再生を停止する。
+   * キュー内のトーンも除去する。
+   */
+  stopThinking(): void {
+    if (!this.thinkingTimer) return;
+
+    clearInterval(this.thinkingTimer);
+    this.thinkingTimer = null;
+
+    // キューからトーン用バッファを除去する。
+    // トーンは同一参照なので === で判定できる。
+    for (let i = this.queue.length - 1; i >= 0; i--) {
+      if (this.queue[i] === this.thinkingTone) {
+        this.queue.splice(i, 1);
+      }
+    }
+    log.debug("thinking tone stopped");
+  }
+
+  /**
+   * エラートーンを 1 回再生する。
+   * 現在の再生キューに追加される。
+   */
+  playErrorTone(): void {
+    log.debug("playing error tone");
+    this.stopThinking();
+    this.queue.push(this.errorTone);
+    if (!this.isPlaying) this.playNext();
   }
 
   /**
