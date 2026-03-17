@@ -217,17 +217,28 @@ export class ClaudeLlm implements LanguageModel {
     } catch (e: unknown) {
       log.error("API error:", e);
       // このターンで追加されたメッセージをすべて削除する。
-      this.history.length = historyLen;
+      // 外部から clearHistory() 等で配列が縮小されていた場合に
+      // ホール（undefined）が生じないよう、膨張させない。
+      this.history.length = Math.min(historyLen, this.history.length);
       return "";
     }
   }
 
   /**
    * @inheritdoc
+   *
+   * mutex で直列化し、進行中の API 呼び出しとの競合を防ぐ。
    */
   clearHistory(): void {
-    this.history.length = 0;
-    log.info("conversation history cleared");
+    const prev = this.chatMutex;
+    let resolve!: () => void;
+    this.chatMutex = new Promise<void>((r) => {
+      resolve = r;
+    });
+    prev.then(() => {
+      this.history.length = 0;
+      log.info("conversation history cleared");
+    }).finally(() => resolve());
   }
 
   /**
