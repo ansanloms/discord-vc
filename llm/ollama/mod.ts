@@ -133,15 +133,16 @@ export class OllamaLlm implements LanguageModel {
    * chat() の実体。mutex によって直列実行が保証される。
    */
   private async chatInternal(userMessage: string): Promise<string> {
-    // エラー時に履歴を巻き戻すためのスナップショット。
-    const historyLen = this.history.length;
-
     this.history.push({ role: "user", content: userMessage });
 
     // 直近のターンのみ保持するよう履歴をトリミングする。
     while (this.history.length > MAX_HISTORY * 2) {
       this.history.shift();
     }
+
+    // エラー時に履歴を巻き戻すためのスナップショット。
+    // push + trimming 後に取得することで、ロールバック先が正確になる。
+    const historyLen = this.history.length - 1;
 
     try {
       // system prompt はラウンドトリップ間で不変なのでループ外で構築する。
@@ -222,17 +223,28 @@ export class OllamaLlm implements LanguageModel {
     } catch (e: unknown) {
       log.error("API error:", e);
       // このターンで追加されたメッセージをすべて削除する。
-      this.history.length = historyLen;
+      // 外部から clearHistory() 等で配列が縮小されていた場合に
+      // ホール（undefined）が生じないよう、膨張させない。
+      this.history.length = Math.min(historyLen, this.history.length);
       return "";
     }
   }
 
   /**
    * @inheritdoc
+   *
+   * mutex で直列化し、進行中の API 呼び出しとの競合を防ぐ。
    */
-  clearHistory(): void {
-    this.history.length = 0;
-    log.info("conversation history cleared");
+  clearHistory(): Promise<void> {
+    const prev = this.chatMutex;
+    let resolve!: () => void;
+    this.chatMutex = new Promise<void>((r) => {
+      resolve = r;
+    });
+    return prev.then(() => {
+      this.history.length = 0;
+      log.info("conversation history cleared");
+    }).finally(() => resolve());
   }
 
   /**
