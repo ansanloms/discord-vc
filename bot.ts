@@ -348,7 +348,7 @@ export class DiscordBot {
     if (group === "clear") {
       switch (sub) {
         case "history": {
-          this.llm.clearHistory();
+          await this.llm.clearHistory();
           await interaction.reply("Conversation history cleared.");
           return;
         }

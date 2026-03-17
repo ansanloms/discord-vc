@@ -165,15 +165,16 @@ export class ClaudeLlm implements LanguageModel {
    * chat() の実体。mutex によって直列実行が保証される。
    */
   private async chatInternal(userMessage: string): Promise<string> {
-    // エラー時に履歴を巻き戻すためのスナップショット。
-    const historyLen = this.history.length;
-
     this.history.push({ role: "user", content: userMessage });
 
     // 直近のターンのみ保持するよう履歴をトリミングする。
     while (this.history.length > MAX_HISTORY * 2) {
       this.history.shift();
     }
+
+    // エラー時に履歴を巻き戻すためのスナップショット。
+    // push + trimming 後に取得することで、ロールバック先が正確になる。
+    const historyLen = this.history.length - 1;
 
     try {
       // system prompt と tools はラウンドトリップ間で不変なのでループ外で構築する。
@@ -229,13 +230,13 @@ export class ClaudeLlm implements LanguageModel {
    *
    * mutex で直列化し、進行中の API 呼び出しとの競合を防ぐ。
    */
-  clearHistory(): void {
+  clearHistory(): Promise<void> {
     const prev = this.chatMutex;
     let resolve!: () => void;
     this.chatMutex = new Promise<void>((r) => {
       resolve = r;
     });
-    prev.then(() => {
+    return prev.then(() => {
       this.history.length = 0;
       log.info("conversation history cleared");
     }).finally(() => resolve());

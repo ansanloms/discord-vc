@@ -35,7 +35,7 @@ export interface LanguageModel {
   /**
    * 会話履歴をクリアする。
    */
-  clearHistory(): void;
+  clearHistory(): void | Promise<void>;
 
   /**
    * テンプレート変数のコンテキストを設定する。
