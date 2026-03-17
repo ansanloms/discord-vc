@@ -44,7 +44,9 @@ const SUPPORTED_MEDIA_TYPES = new Set<SupportedMediaType>([
 function toSupportedMediaType(
   contentType: string | null,
 ): SupportedMediaType | null {
-  if (!contentType) return null;
+  if (!contentType) {
+    return null;
+  }
   return SUPPORTED_MEDIA_TYPES.has(contentType as SupportedMediaType)
     ? (contentType as SupportedMediaType)
     : null;
@@ -131,7 +133,9 @@ export async function execute(
   for (const msg of messages.values()) {
     for (const attachment of msg.attachments.values()) {
       const mediaType = toSupportedMediaType(attachment.contentType);
-      if (!mediaType) continue;
+      if (!mediaType) {
+        continue;
+      }
 
       if (attachment.size > MAX_IMAGE_BYTES) {
         log.debug(

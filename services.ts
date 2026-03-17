@@ -63,7 +63,7 @@ export function createServices(config: Config): Services {
   const stt = createStt(config.stt);
   const tts = createTts(config.tts);
   const llm = createLlm(config.llm);
-  const voicePlayer = new VoicePlayer(tts);
+  const voicePlayer = new VoicePlayer(tts, config.voice.notificationTone);
 
   return { stt, tts, llm, voicePlayer };
 }

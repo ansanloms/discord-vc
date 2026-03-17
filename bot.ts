@@ -136,6 +136,12 @@ export interface VoiceThresholds {
    * この時間内に同一ユーザーの追加発話があればまとめて LLM に投げる。
    */
   speechDebounceMs: number;
+
+  /**
+   * 通知トーン（処理中・エラー）の有効/無効。
+   * false の場合、処理中トーンとエラートーンは再生されない。
+   */
+  notificationTone: boolean;
 }
 
 const log = createLogger("bot");
@@ -269,7 +275,9 @@ export class DiscordBot {
 
     // VC メンバーの入退室を監視し、誰もいなくなったら自動退出する。
     this.client.on("voiceStateUpdate", (_oldState, newState) => {
-      if (!this.currentChannelId) return;
+      if (!this.currentChannelId) {
+        return;
+      }
       if (
         newState.channelId !== this.currentChannelId &&
         _oldState.channelId !== this.currentChannelId
@@ -286,17 +294,23 @@ export class DiscordBot {
    * メンバーが戻ってきた場合はタイマーをキャンセルする。
    */
   private checkAutoLeave(): void {
-    if (!this.currentChannelId || this.config.voice.autoLeaveMs < 0) return;
+    if (!this.currentChannelId || this.config.voice.autoLeaveMs < 0) {
+      return;
+    }
 
     const channel = this.client.channels.cache.get(this.currentChannelId);
-    if (!channel || channel.type !== ChannelType.GuildVoice) return;
+    if (!channel || channel.type !== ChannelType.GuildVoice) {
+      return;
+    }
 
     // ボット自身を除いたメンバー数。
     const memberCount = channel.members.filter((m) => !m.user.bot).size;
 
     if (memberCount === 0) {
       // 既にタイマーが動いていれば何もしない。
-      if (this.autoLeaveTimer) return;
+      if (this.autoLeaveTimer) {
+        return;
+      }
 
       log.info(
         `no members in VC, auto-leave in ${
@@ -467,7 +481,9 @@ export class DiscordBot {
       this.voicePlayer.startThinking();
       let lastChunk: string | undefined;
       for await (const chunk of this.llm.chat(formatted)) {
-        if (!chunk) continue;
+        if (!chunk) {
+          continue;
+        }
         this.voicePlayer.stopThinking();
         log.info(`reply chunk: ${chunk}`);
         lastChunk = chunk;
@@ -833,7 +849,9 @@ export class DiscordBot {
       );
       this.voicePlayer.startThinking();
       for await (const chunk of this.llm.chat(formatted)) {
-        if (!chunk) continue;
+        if (!chunk) {
+          continue;
+        }
         this.voicePlayer.stopThinking();
         log.info(`reply chunk: ${chunk}`);
         await this.voicePlayer.speak(chunk);

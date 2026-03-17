@@ -64,6 +64,7 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
           interruptRms: 600,
           autoLeaveMs: 300000,
           speechDebounceMs: 250,
+          notificationTone: true,
         });
         assertEquals(config.stt, {
           type: "whisper",
@@ -133,6 +134,7 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
         interruptRms: 500,
         autoLeaveMs: 600000,
         speechDebounceMs: 500,
+        notificationTone: true,
       });
       assertEquals(config.stt, {
         type: "whisper",
@@ -161,7 +163,9 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
     });
   } finally {
     for (const [key, val] of Object.entries(saved)) {
-      if (val !== undefined) Deno.env.set(key, val);
+      if (val !== undefined) {
+        Deno.env.set(key, val);
+      }
     }
   }
 });

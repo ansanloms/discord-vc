@@ -75,9 +75,16 @@ export class VoicePlayer {
   private readonly errorTone: Buffer = generateErrorTone();
 
   /**
-   * @param tts - 音声チャンクの合成に使う TTS バックエンド。
+   * 通知トーンが有効かどうか。
    */
-  constructor(private readonly tts: TextToSpeech) {
+  private readonly toneEnabled: boolean;
+
+  /**
+   * @param tts - 音声チャンクの合成に使う TTS バックエンド。
+   * @param toneEnabled - 通知トーンの有効/無効（デフォルト: true）。
+   */
+  constructor(private readonly tts: TextToSpeech, toneEnabled: boolean = true) {
+    this.toneEnabled = toneEnabled;
     this.player = createAudioPlayer();
 
     this.player.on(AudioPlayerStatus.Playing, () => {
@@ -125,16 +132,25 @@ export class VoicePlayer {
    * 既にループ中の場合は何もしない。
    */
   startThinking(): void {
-    if (this.thinkingTimer) return;
+    if (!this.toneEnabled) {
+      return;
+    }
+    if (this.thinkingTimer) {
+      return;
+    }
 
     log.debug("thinking tone started");
     this.isThinking = true;
     this.queue.push(this.thinkingTone);
-    if (!this.isPlaying) this.playNext();
+    if (!this.isPlaying) {
+      this.playNext();
+    }
 
     this.thinkingTimer = setInterval(() => {
       this.queue.push(this.thinkingTone);
-      if (!this.isPlaying) this.playNext();
+      if (!this.isPlaying) {
+        this.playNext();
+      }
     }, 850);
   }
 
@@ -143,7 +159,9 @@ export class VoicePlayer {
    * キュー内のトーンも除去する。
    */
   stopThinking(): void {
-    if (!this.thinkingTimer) return;
+    if (!this.thinkingTimer) {
+      return;
+    }
 
     clearInterval(this.thinkingTimer);
     this.thinkingTimer = null;
@@ -164,10 +182,15 @@ export class VoicePlayer {
    * 現在の再生キューに追加される。
    */
   playErrorTone(): void {
+    if (!this.toneEnabled) {
+      return;
+    }
     log.debug("playing error tone");
     this.stopThinking();
     this.queue.push(this.errorTone);
-    if (!this.isPlaying) this.playNext();
+    if (!this.isPlaying) {
+      this.playNext();
+    }
   }
 
   /**
@@ -197,7 +220,9 @@ export class VoicePlayer {
       const buf = await p;
       if (buf.length > 0) {
         this.queue.push(buf);
-        if (!this.isPlaying) this.playNext();
+        if (!this.isPlaying) {
+          this.playNext();
+        }
       }
     }
   }
