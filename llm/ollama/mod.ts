@@ -95,7 +95,9 @@ export class OllamaLlm implements LanguageModel {
     this.toolExecutors = {};
     for (const mod of discordTools) {
       const name = mod.tool.function.name;
-      if (!name) continue;
+      if (!name) {
+        continue;
+      }
       this.toolExecutors[name] = (input: Record<string, unknown>) => {
         if (!this.discord) {
           throw new Error("Discord client is not configured");
@@ -186,12 +188,16 @@ export class OllamaLlm implements LanguageModel {
           !response.message.tool_calls ||
           response.message.tool_calls.length === 0
         ) {
-          if (content) yield content;
+          if (content) {
+            yield content;
+          }
           return;
         }
 
         // ツールラウンド中の中間テキストを yield する。
-        if (content) yield content;
+        if (content) {
+          yield content;
+        }
 
         // ツール呼び出しを実行して結果を履歴に追加する。
         for (const toolCall of response.message.tool_calls) {

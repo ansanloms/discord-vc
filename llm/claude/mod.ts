@@ -219,7 +219,9 @@ export class ClaudeLlm implements LanguageModel {
         }
 
         // ツールラウンド中の中間テキスト（例: 「調べます」）を yield する。
-        if (text) yield text;
+        if (text) {
+          yield text;
+        }
 
         // クライアントサイドの tool_use ブロックのみ解決が必要。
         // server_tool_use（web_search 等）はレスポンスに結果が含まれている。

@@ -3,6 +3,9 @@
   "fmt": {
     "proseWrap": "preserve"
   },
+  "lint": {
+    "plugins": ["jsr:@aireone/deno-lint-curly"]
+  },
   "imports": {
     "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk@^0.78.0",
     "@anthropic-ai/sdk/": "npm:/@anthropic-ai/sdk@^0.78.0/",
@@ -17,7 +20,10 @@
   },
   "tasks": {
     "start": "deno run -A main.ts",
-    "test": "deno test -A"
+    "test": "deno test -A --parallel",
+    "lint": "deno lint && deno fmt --check ",
+    "fix": "deno lint --fix && deno fmt",
+    "check": "deno check"
   },
   "allowScripts": {}
 }

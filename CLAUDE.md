@@ -7,9 +7,9 @@
 コミット前に必ず実行すること:
 
 ```sh
-deno fmt                  # フォーマット
-deno lint                 # リント
-deno check **/*.ts        # 型チェック
+deno task fmt           # フォーマット
+deno task lint          # リント
+deno task check         # 型チェック
 ```
 
 ### テスト

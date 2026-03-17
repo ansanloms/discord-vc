@@ -163,7 +163,9 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
     });
   } finally {
     for (const [key, val] of Object.entries(saved)) {
-      if (val !== undefined) Deno.env.set(key, val);
+      if (val !== undefined) {
+        Deno.env.set(key, val);
+      }
     }
   }
 });

@@ -30,7 +30,9 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
 function getMinLevel(): LogLevel {
   try {
     const env = Deno.env.get("LOG_LEVEL")?.toUpperCase();
-    if (env && env in LEVEL_ORDER) return env as LogLevel;
+    if (env && env in LEVEL_ORDER) {
+      return env as LogLevel;
+    }
   } catch {
     // --allow-env が付与されていない場合はデフォルトに落ちる
   }
@@ -59,7 +61,9 @@ export interface Logger {
  */
 export function createLogger(namespace: string): Logger {
   function emit(level: LogLevel, msg: string, args: unknown[]): void {
-    if (LEVEL_ORDER[level] < LEVEL_ORDER[minLevel]) return;
+    if (LEVEL_ORDER[level] < LEVEL_ORDER[minLevel]) {
+      return;
+    }
     const ts = new Date().toISOString();
     const prefix = `${ts} [${level.padEnd(5)}] [${namespace}]`;
     if (level === "ERROR") {

@@ -1,6 +1,7 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@aireone/deno-lint-curly@*": "0.2.0",
     "jsr:@openai/openai@^6.29.0": "6.29.0",
     "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/dotenv@~0.225.6": "0.225.6",
@@ -14,6 +15,9 @@
     "npm:zod@3": "3.25.76"
   },
   "jsr": {
+    "@aireone/deno-lint-curly@0.2.0": {
+      "integrity": "c182ea5d2ed999c06ffa88a21aac2aed3cf0d14a1128d7fad3034337f7822b48"
+    },
     "@openai/openai@6.29.0": {
       "integrity": "43c384ea4bf35c95b207d1e46c72e8170fa13e8932a6205c2847b7ca016ed767",
       "dependencies": [
