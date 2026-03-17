@@ -464,13 +464,16 @@ export class DiscordBot {
         userId,
       );
 
+      this.voicePlayer.startThinking();
       let lastChunk: string | undefined;
       for await (const chunk of this.llm.chat(formatted)) {
         if (!chunk) continue;
+        this.voicePlayer.stopThinking();
         log.info(`reply chunk: ${chunk}`);
         lastChunk = chunk;
         await this.voicePlayer.speak(chunk);
       }
+      this.voicePlayer.stopThinking();
 
       if (!lastChunk) {
         await interaction.editReply("(No response)");
@@ -482,6 +485,7 @@ export class DiscordBot {
       await interaction.editReply(lastChunk);
     } catch (e: unknown) {
       log.error("text pipeline error:", e);
+      this.voicePlayer.playErrorTone();
       await interaction.editReply("An error occurred.").catch(() => {});
     }
   }
@@ -750,9 +754,13 @@ export class DiscordBot {
         } KB PCM, RMS: ${rms.toFixed(0)}`,
       );
 
+      // STT にも遅延があるため、ここからフィードバック音を開始する。
+      this.voicePlayer.startThinking();
+
       const text = await this.stt.transcribe(pcm);
       if (!text) {
         log.info("no transcription result");
+        this.voicePlayer.stopThinking();
         return;
       }
 
@@ -767,6 +775,7 @@ export class DiscordBot {
       this.enqueueSpeech(userId, displayName, text);
     } catch (e: unknown) {
       log.error(`pipeline error for user ${userId}:`, e);
+      this.voicePlayer.playErrorTone();
     }
   }
 
@@ -822,13 +831,17 @@ export class DiscordBot {
       log.info(
         `sending to LLM (${entry.texts.length} segment(s)): ${mergedText}`,
       );
+      this.voicePlayer.startThinking();
       for await (const chunk of this.llm.chat(formatted)) {
         if (!chunk) continue;
+        this.voicePlayer.stopThinking();
         log.info(`reply chunk: ${chunk}`);
         await this.voicePlayer.speak(chunk);
       }
+      this.voicePlayer.stopThinking();
     } catch (e: unknown) {
       log.error(`pipeline error for user ${userId}:`, e);
+      this.voicePlayer.playErrorTone();
     }
   }
 
