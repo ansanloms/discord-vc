@@ -10,6 +10,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   MessageParam,
+  TextBlock,
   TextBlockParam,
   ToolResultBlockParam,
   ToolUnion,
@@ -326,8 +327,8 @@ export class ClaudeLlm implements LanguageModel {
     content: Anthropic.ContentBlock[],
   ): string {
     return content
-      .filter((b) => b.type === "text")
-      .map((b) => (b as { type: "text"; text: string }).text)
+      .filter((b): b is TextBlock => b.type === "text")
+      .map((b) => b.text)
       .join("");
   }
 

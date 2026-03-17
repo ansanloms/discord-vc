@@ -23,6 +23,16 @@ function textResponse(content: string): ChatResponse {
 }
 
 /**
+ * tool_calls を含むレスポンスを生成する（テキストなし）。
+ */
+function toolUseResponse(
+  toolName: string,
+  args: Record<string, unknown>,
+): ChatResponse {
+  return toolUseWithTextResponse("", toolName, args);
+}
+
+/**
  * tool_calls と中間テキストを同時に含むレスポンスを生成する。
  */
 function toolUseWithTextResponse(
@@ -211,13 +221,32 @@ Deno.test("OllamaLlm.chat: ツールラウンド中の中間テキストが yiel
   assertEquals(chunks, ["調べるね", "チャンネル一覧です"]);
 });
 
+Deno.test("OllamaLlm.chat: ラウンド上限に達した場合に何も yield しないこと", async () => {
+  const { llm } = createMockedLlm(
+    [
+      toolUseResponse("discord_list_channels", {}),
+      toolUseResponse("discord_list_channels", {}),
+      toolUseResponse("discord_list_channels", {}),
+    ],
+    { maxToolRounds: 1 },
+  );
+
+  llm.setDiscordClient({
+    // deno-lint-ignore no-explicit-any
+    client: { guilds: { cache: new Map() } } as any,
+    guildId: "test-guild",
+  });
+
+  assertEquals(await collectAll(llm.chat("test")), []);
+});
+
 Deno.test("OllamaLlm.clearHistory: 会話履歴がクリアされること", async () => {
   const { llm, calls } = createMockedLlm([
     textResponse("返答1"),
     textResponse("返答2"),
   ]);
   await collectAll(llm.chat("一発目"));
-  llm.clearHistory();
+  await llm.clearHistory();
   await collectAll(llm.chat("二発目"));
 
   const messages = calls[1].messages;

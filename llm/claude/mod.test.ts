@@ -275,7 +275,7 @@ Deno.test("ClaudeLlm.clearHistory: 会話履歴がクリアされること", asy
     textResponse("返答2"),
   ]);
   await collectAll(llm.chat("一発目"));
-  llm.clearHistory();
+  await llm.clearHistory();
   await collectAll(llm.chat("二発目"));
 
   // クリア後の 2 回目のリクエストには 1 回目の履歴がないこと。
