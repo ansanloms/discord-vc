@@ -49,9 +49,15 @@ export class VoicePlayer {
   private isPlaying = false;
 
   /**
-   * 音声の合成中または再生中に true。
+   * TTS 音声の合成中または再生中に true。
+   * 処理中トーンの再生では true にならない。
    */
   public isSpeaking = false;
+
+  /**
+   * 処理中トーンのループ中に true。
+   */
+  public isThinking = false;
 
   /**
    * 処理中トーンのループタイマー。null ならループ停止中。
@@ -75,7 +81,11 @@ export class VoicePlayer {
     this.player = createAudioPlayer();
 
     this.player.on(AudioPlayerStatus.Playing, () => {
-      this.isSpeaking = true;
+      // 処理中トーン再生時は isSpeaking を立てない。
+      // isSpeaking が true だと interruptRms の高い閾値が適用されてしまう。
+      if (!this.isThinking) {
+        this.isSpeaking = true;
+      }
     });
 
     // リソースの再生が終わったら次のキューを再生する。
@@ -106,6 +116,7 @@ export class VoicePlayer {
     this.queue.length = 0;
     this.isPlaying = false;
     this.isSpeaking = false;
+    this.isThinking = false;
   }
 
   /**
@@ -117,6 +128,7 @@ export class VoicePlayer {
     if (this.thinkingTimer) return;
 
     log.debug("thinking tone started");
+    this.isThinking = true;
     this.queue.push(this.thinkingTone);
     if (!this.isPlaying) this.playNext();
 
@@ -135,6 +147,7 @@ export class VoicePlayer {
 
     clearInterval(this.thinkingTimer);
     this.thinkingTimer = null;
+    this.isThinking = false;
 
     // キューからトーン用バッファを除去する。
     // トーンは同一参照なので === で判定できる。

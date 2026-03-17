@@ -754,9 +754,13 @@ export class DiscordBot {
         } KB PCM, RMS: ${rms.toFixed(0)}`,
       );
 
+      // STT にも遅延があるため、ここからフィードバック音を開始する。
+      this.voicePlayer.startThinking();
+
       const text = await this.stt.transcribe(pcm);
       if (!text) {
         log.info("no transcription result");
+        this.voicePlayer.stopThinking();
         return;
       }
 

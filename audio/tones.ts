@@ -17,7 +17,7 @@ const SAMPLE_RATE = 48000;
 /**
  * 倍音の定義。
  */
-interface Partial {
+interface OvertonePartial {
   /** 基音に対する周波数倍率。 */
   ratio: number;
   /** 基音に対する振幅比（0.0 〜 1.0）。 */
@@ -32,7 +32,7 @@ interface Partial {
  * 実際のマリンバは基音・4 倍音（2 オクターブ上）・10 倍音付近が卓越する。
  * 高次倍音ほど速く減衰させることで木質的な温かみを出す。
  */
-const MARIMBA_PARTIALS: Partial[] = [
+const MARIMBA_PARTIALS: OvertonePartial[] = [
   { ratio: 1.0, amplitude: 1.0, decay: 14.0 },
   { ratio: 4.0, amplitude: 0.3, decay: 24.0 },
   { ratio: 10.0, amplitude: 0.08, decay: 40.0 },
@@ -76,7 +76,7 @@ function generateMarimbaTone(
     }
 
     const clamped = Math.max(
-      -32767,
+      -32768,
       Math.min(32767, Math.round(sample * 32767 * volume * fadeIn)),
     );
     buf.writeInt16LE(clamped, i * 2);
