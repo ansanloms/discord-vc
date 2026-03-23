@@ -205,7 +205,10 @@ export class ClaudeLlm implements LanguageModel {
         });
 
         this.logUsage(response.usage, round);
-        this.history.push({ role: "assistant", content: response.content });
+        this.history.push({
+          role: "assistant",
+          content: this.sanitizeContentForHistory(response.content),
+        });
 
         const text = this.extractText(response.content);
 
@@ -341,6 +344,34 @@ export class ClaudeLlm implements LanguageModel {
       .filter((b): b is TextBlock => b.type === "text")
       .map((b) => b.text)
       .join("");
+  }
+
+  /**
+   * API レスポンスのコンテンツブロックから、履歴に保存すると
+   * 次回リクエスト時にエラーになる要素を除去する。
+   *
+   * - `server_tool_use` / `server_tool_result`: サーバーサイドツール専用ブロック。
+   *   履歴に含めると API が拒否する。
+   * - `citations`: テキストブロックに付与される検索結果参照。
+   *   参照先の search result が次回リクエストに存在しないため除去する。
+   */
+  private sanitizeContentForHistory(
+    content: Anthropic.ContentBlock[],
+  ): Anthropic.ContentBlockParam[] {
+    return content
+      .filter((b) => {
+        // server_tool_use / server_tool_result は SDK の型定義に含まれないが
+        // web search 等のサーバーサイドツール使用時に実行時に出現する。
+        const t = b.type as string;
+        return t !== "server_tool_use" && t !== "server_tool_result";
+      })
+      .map((b) => {
+        if (b.type === "text" && "citations" in b) {
+          const { citations: _, ...rest } = b;
+          return rest as TextBlockParam;
+        }
+        return b as Anthropic.ContentBlockParam;
+      });
   }
 
   /**
