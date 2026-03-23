@@ -1,3 +1,4 @@
 .env
 credentials.json
 config/SYSTEM_PROMPT.md
+config/**/*.md

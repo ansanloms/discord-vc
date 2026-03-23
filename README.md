@@ -121,10 +121,10 @@ The `Config` type uses discriminated unions (`{ type, config }`) for each backen
 
 Select backend with `LLM_TYPE` (default: `claude`).
 
-| Variable             | Default                   | Description                      |
-| -------------------- | ------------------------- | -------------------------------- |
-| `LLM_TYPE`           | `claude`                  | LLM backend: `claude` / `ollama` |
-| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | Path to system prompt file       |
+| Variable             | Default                   | Description                                                                                                                                      |
+| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `LLM_TYPE`           | `claude`                  | LLM backend: `claude` / `ollama`                                                                                                                 |
+| `SYSTEM_PROMPT_FILE` | `config/SYSTEM_PROMPT.md` | System prompt file path(s). Comma-separated for multiple files. Supports `{{KEY}}` template variables (e.g. `{{discord.channel.current.name}}`). |
 
 #### Claude (`LLM_TYPE=claude`)
 

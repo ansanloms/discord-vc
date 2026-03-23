@@ -11,7 +11,6 @@ import { Ollama } from "ollama";
 import type { Message, Tool } from "ollama";
 import { createLogger } from "../../logger.ts";
 import type { DiscordContext, LanguageModel } from "../types.ts";
-import { replaceTemplateVariables } from "../template.ts";
 import * as listMembers from "./tools/discord-list-members.ts";
 import * as listChannels from "./tools/discord-list-channels.ts";
 import * as sendMessage from "./tools/discord-send-message.ts";
@@ -66,7 +65,7 @@ export interface OllamaLlmConfig {
 export class OllamaLlm implements LanguageModel {
   private readonly client: Ollama;
   private readonly model: string;
-  private readonly systemPromptTemplate?: string;
+  private systemPrompt?: string;
   private context: Record<string, string> = {};
   private readonly tools: Tool[];
   private readonly toolExecutors: Record<string, ToolExecutor>;
@@ -85,7 +84,7 @@ export class OllamaLlm implements LanguageModel {
       host: config.host,
     });
     this.model = config.model;
-    this.systemPromptTemplate = config.systemPrompt;
+    this.systemPrompt = config.systemPrompt;
     this.maxToolRounds = config.maxToolRounds ?? 5;
 
     const discordTools = [listMembers, listChannels, sendMessage, getMessages];
@@ -162,10 +161,7 @@ export class OllamaLlm implements LanguageModel {
     const historyLen = this.history.length - 1;
 
     try {
-      // system prompt はラウンドトリップ間で不変なのでループ外で構築する。
-      const system = this.systemPromptTemplate
-        ? replaceTemplateVariables(this.systemPromptTemplate, this.context)
-        : undefined;
+      const system = this.systemPrompt;
 
       for (let round = 0; round <= this.maxToolRounds; round++) {
         const messages: Message[] = [
@@ -275,6 +271,13 @@ export class OllamaLlm implements LanguageModel {
   /**
    * @inheritdoc
    */
+  setSystemPrompt(prompt: string | undefined): void {
+    this.systemPrompt = prompt;
+  }
+
+  /**
+   * @inheritdoc
+   */
   setContext(context: Record<string, string | undefined>): void {
     for (const [key, value] of Object.entries(context)) {
       if (value === undefined) {
@@ -283,6 +286,13 @@ export class OllamaLlm implements LanguageModel {
         this.context[key] = value;
       }
     }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  getContext(): Record<string, string> {
+    return { ...this.context };
   }
 
   /**

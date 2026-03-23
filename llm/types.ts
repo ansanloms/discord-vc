@@ -42,14 +42,27 @@ export interface LanguageModel {
   clearHistory(): void | Promise<void>;
 
   /**
+   * システムプロンプトを設定する。
+   * 呼び出し以降の chat() で使用される。
+   *
+   * @param prompt - システムプロンプト文字列。undefined でクリア。
+   */
+  setSystemPrompt(prompt: string | undefined): void;
+
+  /**
    * テンプレート変数のコンテキストを設定する。
-   * システムプロンプト内の `{{KEY}}` が対応する値で置換される。
+   * システムプロンプトのパス解決や内容の変数置換に使用される。
    * 既存のコンテキストにマージされる。
    * 値が `undefined` のキーはコンテキストから削除される。
    *
    * @param context - キーと値のマップ。
    */
   setContext(context: Record<string, string | undefined>): void;
+
+  /**
+   * 現在のテンプレート変数コンテキストを返す。
+   */
+  getContext(): Record<string, string>;
 
   /**
    * Discord クライアントを設定する。
