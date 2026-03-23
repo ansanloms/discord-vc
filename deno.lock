@@ -2,12 +2,12 @@
   "version": "5",
   "specifiers": {
     "jsr:@aireone/deno-lint-curly@*": "0.2.0",
-    "jsr:@openai/openai@^6.29.0": "6.29.0",
+    "jsr:@openai/openai@^6.32.0": "6.32.0",
     "jsr:@std/assert@^1.0.19": "1.0.19",
     "jsr:@std/dotenv@~0.225.6": "0.225.6",
     "jsr:@std/internal@^1.0.12": "1.0.12",
-    "npm:@anthropic-ai/sdk@0.78": "0.78.0_zod@3.25.76",
-    "npm:@discordjs/voice@0.19.1": "0.19.1_opusscript@0.1.1",
+    "npm:@anthropic-ai/sdk@0.80": "0.80.0_zod@3.25.76",
+    "npm:@discordjs/voice@0.19.2": "0.19.2_opusscript@0.1.1",
     "npm:@snazzah/davey@~0.1.10": "0.1.10",
     "npm:discord.js@^14.25.1": "14.25.1",
     "npm:ollama@~0.6.3": "0.6.3",
@@ -18,8 +18,8 @@
     "@aireone/deno-lint-curly@0.2.0": {
       "integrity": "c182ea5d2ed999c06ffa88a21aac2aed3cf0d14a1128d7fad3034337f7822b48"
     },
-    "@openai/openai@6.29.0": {
-      "integrity": "43c384ea4bf35c95b207d1e46c72e8170fa13e8932a6205c2847b7ca016ed767",
+    "@openai/openai@6.32.0": {
+      "integrity": "cea1b2f53733d1de51b7a0cccb7772ecd14677b2f73daba6eb158dcf129c47d2",
       "dependencies": [
         "npm:zod"
       ]
@@ -38,8 +38,8 @@
     }
   },
   "npm": {
-    "@anthropic-ai/sdk@0.78.0_zod@3.25.76": {
-      "integrity": "sha512-PzQhR715td/m1UaaN5hHXjYB8Gl2lF9UVhrrGrZeysiF6Rb74Wc9GCB8hzLdzmQtBd1qe89F9OptgB9Za1Ib5w==",
+    "@anthropic-ai/sdk@0.80.0_zod@3.25.76": {
+      "integrity": "sha512-WeXLn7zNVk3yjeshn+xZHvld6AoFUOR3Sep6pSoHho5YbSi6HwcirqgPA5ccFuW8QTVJAAU7N8uQQC6Wa9TG+g==",
       "dependencies": [
         "json-schema-to-ts",
         "zod"
@@ -49,8 +49,8 @@
       ],
       "bin": true
     },
-    "@babel/runtime@7.28.6": {
-      "integrity": "sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA=="
+    "@babel/runtime@7.29.2": {
+      "integrity": "sha512-JiDShH45zKHWyGe4ZNVRrCjBz8Nh9TMmZG1kh4QTK8hCBTWBi8Da+i7s1fJw7/lYpM4ccepSNfqzZ/QvABBi5g=="
     },
     "@discordjs/builders@1.13.1": {
       "integrity": "sha512-cOU0UDHc3lp/5nKByDxkmRiNZBpdp0kx55aarbiAfakfKJHlxv/yFW1zmIqCAmwH5CRlrH9iMFKJMpvW4DPB+w==",
@@ -96,8 +96,8 @@
         "discord-api-types"
       ]
     },
-    "@discordjs/voice@0.19.1_opusscript@0.1.1": {
-      "integrity": "sha512-XYbFVyUBB7zhRvrjREfiWDwio24nEp/vFaVe6u9aBIC5UYuT7HvoMt8LgNfZ5hOyaCW0flFr72pkhUGz+gWw4Q==",
+    "@discordjs/voice@0.19.2_opusscript@0.1.1": {
+      "integrity": "sha512-3yJ255e4ag3wfZu/DSxeOZK1UtnqNxnspmLaQetGT0pDkThNZoHs+Zg6dgZZ19JEVomXygvfHn9lNpICZuYtEA==",
       "dependencies": [
         "@snazzah/davey",
         "@types/ws",
@@ -358,11 +358,11 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@openai/openai@^6.29.0",
+      "jsr:@openai/openai@^6.32.0",
       "jsr:@std/assert@^1.0.19",
       "jsr:@std/dotenv@~0.225.6",
-      "npm:@anthropic-ai/sdk@0.78",
-      "npm:@discordjs/voice@0.19.1",
+      "npm:@anthropic-ai/sdk@0.80",
+      "npm:@discordjs/voice@0.19.2",
       "npm:@snazzah/davey@~0.1.10",
       "npm:discord.js@^14.25.1",
       "npm:ollama@~0.6.3",
