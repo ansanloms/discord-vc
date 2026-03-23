@@ -57,7 +57,7 @@ const LLM_CHOICES = [
  * /aivc スラッシュコマンドの定義。
  */
 const vcCommand = new SlashCommandBuilder()
-  .setName("aivc")
+  .setName("vc")
   .setDescription("Voice channel operations")
   .addSubcommand((sub) =>
     sub
