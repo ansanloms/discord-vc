@@ -205,3 +205,55 @@ Deno.test("loadConfig: SYSTEM_PROMPT_FILE が存在しない場合に undefined 
     },
   );
 });
+
+Deno.test("loadConfig: AUTO_JOIN_VC 未設定の場合に false を返すこと", () => {
+  const saved = Deno.env.get("AUTO_JOIN_VC");
+  Deno.env.delete("AUTO_JOIN_VC");
+  try {
+    withEnv(REQUIRED_VARS, () => {
+      const config = loadConfig();
+      assertEquals(config.autoJoinVc, false);
+    });
+  } finally {
+    if (saved !== undefined) {
+      Deno.env.set("AUTO_JOIN_VC", saved);
+    }
+  }
+});
+
+Deno.test("loadConfig: AUTO_JOIN_VC=false の場合に false を返すこと", () => {
+  withEnv({ ...REQUIRED_VARS, AUTO_JOIN_VC: "false" }, () => {
+    const config = loadConfig();
+    assertEquals(config.autoJoinVc, false);
+  });
+});
+
+Deno.test("loadConfig: AUTO_JOIN_VC=true の場合に true を返すこと", () => {
+  withEnv({ ...REQUIRED_VARS, AUTO_JOIN_VC: "true" }, () => {
+    const config = loadConfig();
+    assertEquals(config.autoJoinVc, true);
+  });
+});
+
+Deno.test("loadConfig: AUTO_JOIN_VC にカンマ区切りチャンネル ID を指定した場合に string[] を返すこと", () => {
+  withEnv(
+    { ...REQUIRED_VARS, AUTO_JOIN_VC: "111111111111111111,222222222222222222" },
+    () => {
+      const config = loadConfig();
+      assertEquals(config.autoJoinVc, [
+        "111111111111111111",
+        "222222222222222222",
+      ]);
+    },
+  );
+});
+
+Deno.test("loadConfig: AUTO_JOIN_VC のカンマ区切りで空要素が除去されること", () => {
+  withEnv(
+    { ...REQUIRED_VARS, AUTO_JOIN_VC: "111,,222, ,333" },
+    () => {
+      const config = loadConfig();
+      assertEquals(config.autoJoinVc, ["111", "222", "333"]);
+    },
+  );
+});
