@@ -55,7 +55,7 @@ const LLM_CHOICES = [
 ] as const;
 
 /**
- * /aivc スラッシュコマンドの定義。
+ * /vc スラッシュコマンドの定義。
  */
 const vcCommand = new SlashCommandBuilder()
   .setName("vc")

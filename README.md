@@ -41,15 +41,15 @@ deno task start
 
 ### Slash Commands
 
-All commands use the `/aivc` prefix and are registered as guild commands on bot startup.
+All commands use the `/vc` prefix and are registered as guild commands on bot startup.
 
-| Command                | Description                                    |
-| ---------------------- | ---------------------------------------------- |
-| `/aivc join`           | Join the voice channel (run from VC text chat) |
-| `/aivc leave`          | Disconnect from the voice channel              |
-| `/aivc ping`           | Health check (replies with "pong")             |
-| `/aivc message <text>` | Send text to LLM and speak the response        |
-| `/aivc clear history`  | Clear LLM conversation history                 |
+| Command              | Description                                    |
+| -------------------- | ---------------------------------------------- |
+| `/vc join`           | Join the voice channel (run from VC text chat) |
+| `/vc leave`          | Disconnect from the voice channel              |
+| `/vc ping`           | Health check (replies with "pong")             |
+| `/vc message <text>` | Send text to LLM and speak the response        |
+| `/vc clear history`  | Clear LLM conversation history                 |
 
 Commands that operate on the current voice session (`leave`, `ping`, `message`) must be run from the text chat of the VC the bot is in.
 
