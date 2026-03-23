@@ -25,7 +25,7 @@ import {
   Routes,
   SlashCommandBuilder,
 } from "discord.js";
-import type { ChatInputCommandInteraction } from "discord.js";
+import type { ChatInputCommandInteraction, VoiceState } from "discord.js";
 import {
   EndBehaviorType,
   entersState,
@@ -204,6 +204,12 @@ export class DiscordBot {
   private autoLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
+   * auto-join による joinChannel() が実行中かどうか。
+   * 二重 join を防ぐためのガード。
+   */
+  private isAutoJoining = false;
+
+  /**
    * 発話デバウンス用バッファ。
    * ユーザーごとに STT 結果テキストを溜め、一定時間後にまとめて LLM に投げる。
    */
@@ -273,18 +279,21 @@ export class DiscordBot {
       );
     });
 
-    // VC メンバーの入退室を監視し、誰もいなくなったら自動退出する。
-    this.client.on("voiceStateUpdate", (_oldState, newState) => {
+    // VC メンバーの入退室を監視し、自動参加・自動退出を制御する。
+    this.client.on("voiceStateUpdate", (oldState, newState) => {
+      // ボット未接続時: auto-join 判定。
       if (!this.currentChannelId) {
+        this.tryAutoJoin(newState);
         return;
       }
+      // ボット接続中: auto-leave 判定。
       if (
         newState.channelId !== this.currentChannelId &&
-        _oldState.channelId !== this.currentChannelId
+        oldState.channelId !== this.currentChannelId
       ) {
         return;
       }
-      this.checkAutoLeave();
+      this.tryAutoLeave();
     });
   }
 
@@ -293,7 +302,7 @@ export class DiscordBot {
    * いなければ自動退出タイマーを開始する。
    * メンバーが戻ってきた場合はタイマーをキャンセルする。
    */
-  private checkAutoLeave(): void {
+  private tryAutoLeave(): void {
     if (!this.currentChannelId || this.config.voice.autoLeaveMs < 0) {
       return;
     }
@@ -335,6 +344,8 @@ export class DiscordBot {
               "discord.channel.current.id": undefined,
               "discord.channel.current.name": undefined,
             });
+            // 別 VC にメンバーがいれば自動参加する。
+            this.scanAndAutoJoin();
           }
         }
       }, this.config.voice.autoLeaveMs);
@@ -344,6 +355,86 @@ export class DiscordBot {
         clearTimeout(this.autoLeaveTimer);
         this.autoLeaveTimer = null;
         log.info("auto-leave cancelled (member joined)");
+      }
+    }
+  }
+
+  /**
+   * ボットが未接続のとき、non-bot メンバーの VC 参加を検知して自動参加する。
+   */
+  private tryAutoJoin(newState: VoiceState): void {
+    const autoJoin = this.config.autoJoinVc;
+    if (autoJoin === false || this.isAutoJoining) {
+      return;
+    }
+
+    const channelId = newState.channelId;
+    if (!channelId) {
+      return;
+    }
+
+    // bot の入退室は無視する。
+    if (newState.member?.user.bot) {
+      return;
+    }
+
+    // チャンネル ID 制限チェック。
+    if (Array.isArray(autoJoin) && !autoJoin.includes(channelId)) {
+      return;
+    }
+
+    // GuildVoice チャンネルであることを確認する。
+    const channel = this.client.channels.cache.get(channelId);
+    if (!channel || channel.type !== ChannelType.GuildVoice) {
+      return;
+    }
+
+    log.info(`auto-joining VC ${channelId}`);
+    this.isAutoJoining = true;
+    this.joinChannel(channelId)
+      .catch((e) => log.error("auto-join failed:", e))
+      .finally(() => {
+        this.isAutoJoining = false;
+      });
+  }
+
+  /**
+   * ギルド内の VC をスキャンし、auto-join 条件を満たすチャンネルがあれば参加する。
+   * 起動時や auto-leave / disconnect 後に呼ばれる。
+   */
+  private scanAndAutoJoin(): void {
+    const autoJoin = this.config.autoJoinVc;
+    if (autoJoin === false || this.currentChannelId || this.isAutoJoining) {
+      return;
+    }
+
+    const guild = this.client.guilds.cache.get(this.config.guildId);
+    if (!guild) {
+      return;
+    }
+
+    // ギルドのチャンネル表示順（position 昇順）で走査し、最初に見つかった VC に参加する。
+    const voiceChannels = guild.channels.cache
+      .filter((ch) => ch.type === ChannelType.GuildVoice)
+      .sort((a, b) => a.position - b.position);
+
+    for (const [, channel] of voiceChannels) {
+      if (Array.isArray(autoJoin) && !autoJoin.includes(channel.id)) {
+        continue;
+      }
+
+      const memberCount = channel.members.filter((m) => !m.user.bot).size;
+      if (memberCount > 0) {
+        log.info(
+          `auto-joining VC ${channel.id} (${memberCount} members found by scan)`,
+        );
+        this.isAutoJoining = true;
+        this.joinChannel(channel.id)
+          .catch((e) => log.error("auto-join (scan) failed:", e))
+          .finally(() => {
+            this.isAutoJoining = false;
+          });
+        return; // 最初に見つかった1つだけ。
       }
     }
   }
@@ -414,6 +505,7 @@ export class DiscordBot {
             "discord.channel.current.name": undefined,
           });
         }
+        // 手動退出は意図的な操作なので scanAndAutoJoin() は呼ばない。
         await interaction.reply("Left VC");
         return;
       }
@@ -525,6 +617,7 @@ export class DiscordBot {
     log.info(
       `voice thresholds: minSpeechMs=${this.config.voice.minSpeechMs}, speechRms=${this.config.voice.speechRms}, interruptRms=${this.config.voice.interruptRms}`,
     );
+    log.info(`auto-join VC: ${JSON.stringify(this.config.autoJoinVc)}`);
 
     // ギルド名をコンテキストに設定する。
     const guild = this.client.guilds.cache.get(this.config.guildId);
@@ -546,6 +639,9 @@ export class DiscordBot {
       { body: [vcCommand.toJSON()] },
     );
     log.info("slash commands registered");
+
+    // 起動時: 既にメンバーがいる VC があれば自動参加する。
+    this.scanAndAutoJoin();
   }
 
   /**
@@ -653,6 +749,8 @@ export class DiscordBot {
         "discord.channel.current.id": undefined,
         "discord.channel.current.name": undefined,
       });
+      // 別 VC にメンバーがいれば自動参加する。
+      this.scanAndAutoJoin();
     }
   }
 
