@@ -85,11 +85,11 @@ Deno.test("loadConfig: 必須変数がすべて設定されている場合に正
           config: {
             apiKey: "sk-test",
             model: "test-model",
-            systemPrompt: "テスト用プロンプト",
             maxTokens: 1024,
             maxToolRounds: 5,
           },
         });
+        assertEquals(config.systemPromptFiles, [tmpFile]);
       },
     );
   } finally {
@@ -155,11 +155,14 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
         config: {
           apiKey: undefined,
           model: "claude-haiku-4-5-20251001",
-          systemPrompt: undefined,
           maxTokens: 1024,
           maxToolRounds: 5,
         },
       });
+      assertEquals(
+        config.systemPromptFiles,
+        ["__nonexistent__/SYSTEM_PROMPT.md"],
+      );
     });
   } finally {
     for (const [key, val] of Object.entries(saved)) {
@@ -170,38 +173,35 @@ Deno.test("loadConfig: オプション変数が未設定の場合にデフォル
   }
 });
 
-Deno.test("loadConfig: SYSTEM_PROMPT_FILE で指定したファイルからシステムプロンプトを読み込むこと", () => {
-  const tmpFile = Deno.makeTempFileSync({ suffix: ".md" });
-  Deno.writeTextFileSync(tmpFile, "ファイルからのプロンプト\n");
-
-  try {
-    withEnv(
-      {
-        ...REQUIRED_VARS,
-        SYSTEM_PROMPT_FILE: tmpFile,
-      },
-      () => {
-        const config = loadConfig();
-        assertEquals(
-          config.llm.config.systemPrompt,
-          "ファイルからのプロンプト",
-        );
-      },
-    );
-  } finally {
-    Deno.removeSync(tmpFile);
-  }
-});
-
-Deno.test("loadConfig: SYSTEM_PROMPT_FILE が存在しない場合に undefined を返すこと", () => {
+Deno.test("loadConfig: SYSTEM_PROMPT_FILE で指定したパスパターンが systemPromptFiles に格納されること", () => {
   withEnv(
     {
       ...REQUIRED_VARS,
-      SYSTEM_PROMPT_FILE: "__nonexistent__/SYSTEM_PROMPT.md",
+      SYSTEM_PROMPT_FILE: "config/SYSTEM_PROMPT.md",
     },
     () => {
       const config = loadConfig();
-      assertEquals(config.llm.config.systemPrompt, undefined);
+      assertEquals(
+        config.systemPromptFiles,
+        ["config/SYSTEM_PROMPT.md"],
+      );
+    },
+  );
+});
+
+Deno.test("loadConfig: SYSTEM_PROMPT_FILE のカンマ区切りが配列にパースされること", () => {
+  withEnv(
+    {
+      ...REQUIRED_VARS,
+      SYSTEM_PROMPT_FILE:
+        "config/base.md, config/{{discord.channel.current.name}}.md",
+    },
+    () => {
+      const config = loadConfig();
+      assertEquals(
+        config.systemPromptFiles,
+        ["config/base.md", "config/{{discord.channel.current.name}}.md"],
+      );
     },
   );
 });

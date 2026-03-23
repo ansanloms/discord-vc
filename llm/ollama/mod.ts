@@ -66,7 +66,7 @@ export interface OllamaLlmConfig {
 export class OllamaLlm implements LanguageModel {
   private readonly client: Ollama;
   private readonly model: string;
-  private readonly systemPromptTemplate?: string;
+  private systemPrompt?: string;
   private context: Record<string, string> = {};
   private readonly tools: Tool[];
   private readonly toolExecutors: Record<string, ToolExecutor>;
@@ -85,7 +85,7 @@ export class OllamaLlm implements LanguageModel {
       host: config.host,
     });
     this.model = config.model;
-    this.systemPromptTemplate = config.systemPrompt;
+    this.systemPrompt = config.systemPrompt;
     this.maxToolRounds = config.maxToolRounds ?? 5;
 
     const discordTools = [listMembers, listChannels, sendMessage, getMessages];
@@ -163,8 +163,8 @@ export class OllamaLlm implements LanguageModel {
 
     try {
       // system prompt はラウンドトリップ間で不変なのでループ外で構築する。
-      const system = this.systemPromptTemplate
-        ? replaceTemplateVariables(this.systemPromptTemplate, this.context)
+      const system = this.systemPrompt
+        ? replaceTemplateVariables(this.systemPrompt, this.context)
         : undefined;
 
       for (let round = 0; round <= this.maxToolRounds; round++) {
@@ -275,6 +275,13 @@ export class OllamaLlm implements LanguageModel {
   /**
    * @inheritdoc
    */
+  /**
+   * @inheritdoc
+   */
+  setSystemPrompt(prompt: string | undefined): void {
+    this.systemPrompt = prompt;
+  }
+
   setContext(context: Record<string, string | undefined>): void {
     for (const [key, value] of Object.entries(context)) {
       if (value === undefined) {
@@ -283,6 +290,13 @@ export class OllamaLlm implements LanguageModel {
         this.context[key] = value;
       }
     }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  getContext(): Record<string, string> {
+    return this.context;
   }
 
   /**

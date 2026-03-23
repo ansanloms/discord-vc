@@ -86,7 +86,7 @@ export interface ClaudeLlmConfig {
 export class ClaudeLlm implements LanguageModel {
   private readonly client: Anthropic;
   private readonly model: string;
-  private readonly systemPromptTemplate?: string;
+  private systemPrompt?: string;
   private context: Record<string, string> = {};
   private readonly maxTokens: number;
   private readonly tools: ToolUnion[];
@@ -108,7 +108,7 @@ export class ClaudeLlm implements LanguageModel {
       maxRetries: 5,
     });
     this.model = config.model;
-    this.systemPromptTemplate = config.systemPrompt;
+    this.systemPrompt = config.systemPrompt;
     this.maxTokens = config.maxTokens ?? 1024;
     this.maxToolRounds = config.maxToolRounds ?? 5;
 
@@ -271,6 +271,13 @@ export class ClaudeLlm implements LanguageModel {
   /**
    * @inheritdoc
    */
+  setSystemPrompt(prompt: string | undefined): void {
+    this.systemPrompt = prompt;
+  }
+
+  /**
+   * @inheritdoc
+   */
   setContext(context: Record<string, string | undefined>): void {
     for (const [key, value] of Object.entries(context)) {
       if (value === undefined) {
@@ -279,6 +286,13 @@ export class ClaudeLlm implements LanguageModel {
         this.context[key] = value;
       }
     }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  getContext(): Record<string, string> {
+    return this.context;
   }
 
   /**
@@ -308,11 +322,11 @@ export class ClaudeLlm implements LanguageModel {
    * cache_control を付与する。
    */
   private buildSystemPrompt(): TextBlockParam[] | undefined {
-    if (!this.systemPromptTemplate) {
+    if (!this.systemPrompt) {
       return undefined;
     }
     const text = replaceTemplateVariables(
-      this.systemPromptTemplate,
+      this.systemPrompt,
       this.context,
     );
     return [{

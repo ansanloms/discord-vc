@@ -66,6 +66,12 @@ export interface Config {
   llm: LlmConfig;
 
   /**
+   * システムプロンプトファイルパスパターンの配列。
+   * カンマ区切りで複数指定可能。パスには `{{KEY}}` 形式のテンプレート変数を含められる。
+   */
+  systemPromptFiles: string[];
+
+  /**
    * ユーザーメッセージのテンプレート。
    * `{{discord.user.name}}`, `{{discord.user.id}}`, `{{message}}` が置換される。
    * 未設定時はメッセージをそのまま渡す。
@@ -82,27 +88,14 @@ export interface Config {
 }
 
 /**
- * システムプロンプトをファイルから読み込む。
+ * SYSTEM_PROMPT_FILE 環境変数をパースしてファイルパスパターンの配列を返す。
  *
- * SYSTEM_PROMPT_FILE 環境変数で指定されたパス（デフォルト: config/SYSTEM_PROMPT.md）の
- * ファイルを読み込む。ファイルが存在しない場合は undefined を返す。
+ * カンマ区切りで複数指定可能。パスには `{{KEY}}` 形式のテンプレート変数を含められる。
+ * 実際のファイル読み込みは LLM 実装側で chat() 呼び出し時に行う。
  */
-function loadSystemPrompt(): string | undefined {
-  const filePath = Deno.env.get("SYSTEM_PROMPT_FILE") ??
-    "config/SYSTEM_PROMPT.md";
-
-  try {
-    const content = Deno.readTextFileSync(filePath).trim();
-    if (content.length > 0) {
-      return content;
-    }
-  } catch (e: unknown) {
-    if (!(e instanceof Deno.errors.NotFound)) {
-      throw e;
-    }
-  }
-
-  return undefined;
+function parseSystemPromptFiles(): string[] {
+  const raw = Deno.env.get("SYSTEM_PROMPT_FILE") ?? "config/SYSTEM_PROMPT.md";
+  return raw.split(",").map((p) => p.trim()).filter((p) => p.length > 0);
 }
 
 /**
@@ -122,7 +115,6 @@ export function buildLlmConfig(
         config: {
           apiKey: Deno.env.get("CLAUDE_API_KEY"),
           model: Deno.env.get("CLAUDE_MODEL") ?? "claude-haiku-4-5-20251001",
-          systemPrompt: loadSystemPrompt(),
           maxTokens: Number(Deno.env.get("CLAUDE_MAX_TOKENS") ?? "1024"),
           maxToolRounds: Number(
             Deno.env.get("CLAUDE_MAX_TOOL_ROUNDS") ?? "5",
@@ -135,7 +127,6 @@ export function buildLlmConfig(
         config: {
           host: Deno.env.get("OLLAMA_HOST"),
           model: Deno.env.get("OLLAMA_MODEL") ?? "",
-          systemPrompt: loadSystemPrompt(),
           maxToolRounds: Number(
             Deno.env.get("OLLAMA_MAX_TOOL_ROUNDS") ?? "5",
           ),
@@ -206,6 +197,7 @@ export function loadConfig(): Config {
       },
     },
     llm: buildLlmConfig(),
+    systemPromptFiles: parseSystemPromptFiles(),
     messageTemplate: Deno.env.get("MESSAGE_TEMPLATE"),
     autoJoinVc: parseAutoJoinVc(Deno.env.get("AUTO_JOIN_VC")),
   };

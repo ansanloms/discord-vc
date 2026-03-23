@@ -37,6 +37,7 @@ import {
 import type { VoiceConnection } from "@discordjs/voice";
 import { createLogger } from "./logger.ts";
 import { replaceTemplateVariables } from "./llm/template.ts";
+import { resolveSystemPrompt } from "./llm/system-prompt.ts";
 import { calcRms, createOpusDecoder } from "./audio/codec.ts";
 import type { Config } from "./config.ts";
 import { buildLlmConfig } from "./config.ts";
@@ -257,6 +258,21 @@ export class DiscordBot {
   }
 
   /**
+   * 現在のコンテキストでシステムプロンプトを解決し、LLM に注入する。
+   */
+  private updateSystemPrompt(): void {
+    const context = this.llm.getContext();
+    const prompt = resolveSystemPrompt(
+      this.config.systemPromptFiles,
+      context,
+    );
+    const resolved = prompt
+      ? replaceTemplateVariables(prompt, context)
+      : undefined;
+    this.llm.setSystemPrompt(resolved);
+  }
+
+  /**
    * Discord クライアントのイベントハンドラを登録する。
    * clientReady は start() 内で待機するため、ここでは登録しない。
    */
@@ -344,6 +360,7 @@ export class DiscordBot {
               "discord.channel.current.id": undefined,
               "discord.channel.current.name": undefined,
             });
+            this.updateSystemPrompt();
             // 別 VC にメンバーがいれば自動参加する。
             this.scanAndAutoJoin();
           }
@@ -504,6 +521,7 @@ export class DiscordBot {
             "discord.channel.current.id": undefined,
             "discord.channel.current.name": undefined,
           });
+          this.updateSystemPrompt();
         }
         // 手動退出は意図的な操作なので scanAndAutoJoin() は呼ばない。
         await interaction.reply("Left VC");
@@ -624,6 +642,7 @@ export class DiscordBot {
     if (guild) {
       this.llm.setContext({ "discord.guild.name": guild.name });
     }
+    this.updateSystemPrompt();
 
     // LLM バックエンドに Discord クライアントを設定する。
     this.llm.setDiscordClient({
@@ -654,7 +673,7 @@ export class DiscordBot {
     this.llm = createLlm(llmConfig);
     this.config = { ...this.config, llm: llmConfig };
 
-    // コンテキストを再設定する。
+    // LLM を差し替えたのでコンテキストを再設定する。
     this.llm.setContext({ "discord.guild.id": this.config.guildId });
     const guild = this.client.guilds.cache.get(this.config.guildId);
     if (guild) {
@@ -671,6 +690,7 @@ export class DiscordBot {
         "discord.channel.current.name": channel?.name ?? this.currentChannelId,
       });
     }
+    this.updateSystemPrompt();
 
     log.info(`LLM switched to ${llmType}`);
   }
@@ -705,6 +725,7 @@ export class DiscordBot {
       "discord.channel.current.id": channelId,
       "discord.channel.current.name": channel?.name ?? channelId,
     });
+    this.updateSystemPrompt();
 
     connection.on("stateChange", (_old, newState) => {
       log.debug(`voice state: ${newState.status}`);
@@ -749,6 +770,7 @@ export class DiscordBot {
         "discord.channel.current.id": undefined,
         "discord.channel.current.name": undefined,
       });
+      this.updateSystemPrompt();
       // 別 VC にメンバーがいれば自動参加する。
       this.scanAndAutoJoin();
     }
