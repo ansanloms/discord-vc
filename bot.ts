@@ -260,9 +260,9 @@ export class DiscordBot {
   /**
    * 現在のコンテキストでシステムプロンプトを解決し、LLM に注入する。
    */
-  private updateSystemPrompt(): void {
+  private async updateSystemPrompt(): Promise<void> {
     const context = this.llm.getContext();
-    const prompt = resolveSystemPrompt(
+    const prompt = await resolveSystemPrompt(
       this.config.systemPromptFiles,
       context,
     );
@@ -342,7 +342,7 @@ export class DiscordBot {
           this.config.voice.autoLeaveMs / 1000
         }s`,
       );
-      this.autoLeaveTimer = setTimeout(() => {
+      this.autoLeaveTimer = setTimeout(async () => {
         this.autoLeaveTimer = null;
         // 再度確認してまだ誰もいなければ退出する。
         const ch = this.client.channels.cache.get(this.currentChannelId!);
@@ -360,7 +360,7 @@ export class DiscordBot {
               "discord.channel.current.id": undefined,
               "discord.channel.current.name": undefined,
             });
-            this.updateSystemPrompt();
+            await await this.updateSystemPrompt();
             // 別 VC にメンバーがいれば自動参加する。
             this.scanAndAutoJoin();
           }
@@ -493,7 +493,7 @@ export class DiscordBot {
         // LLM バックエンドの切り替え（VC 参加成功後に行う）。
         const llmType = interaction.options.getString("llm");
         if (llmType) {
-          this.switchLlm(llmType);
+          await this.switchLlm(llmType);
         }
 
         await interaction.editReply(
@@ -521,7 +521,7 @@ export class DiscordBot {
             "discord.channel.current.id": undefined,
             "discord.channel.current.name": undefined,
           });
-          this.updateSystemPrompt();
+          await this.updateSystemPrompt();
         }
         // 手動退出は意図的な操作なので scanAndAutoJoin() は呼ばない。
         await interaction.reply("Left VC");
@@ -642,7 +642,7 @@ export class DiscordBot {
     if (guild) {
       this.llm.setContext({ "discord.guild.name": guild.name });
     }
-    this.updateSystemPrompt();
+    await this.updateSystemPrompt();
 
     // LLM バックエンドに Discord クライアントを設定する。
     this.llm.setDiscordClient({
@@ -668,7 +668,7 @@ export class DiscordBot {
    * 環境変数から対応する設定を読み込み、新しいインスタンスを生成して差し替える。
    * 会話履歴はリセットされる。
    */
-  private switchLlm(llmType: string): void {
+  private async switchLlm(llmType: string): Promise<void> {
     const llmConfig = buildLlmConfig(llmType);
     this.llm = createLlm(llmConfig);
     this.config = { ...this.config, llm: llmConfig };
@@ -690,7 +690,7 @@ export class DiscordBot {
         "discord.channel.current.name": channel?.name ?? this.currentChannelId,
       });
     }
-    this.updateSystemPrompt();
+    await this.updateSystemPrompt();
 
     log.info(`LLM switched to ${llmType}`);
   }
@@ -725,7 +725,7 @@ export class DiscordBot {
       "discord.channel.current.id": channelId,
       "discord.channel.current.name": channel?.name ?? channelId,
     });
-    this.updateSystemPrompt();
+    await this.updateSystemPrompt();
 
     connection.on("stateChange", (_old, newState) => {
       log.debug(`voice state: ${newState.status}`);
@@ -770,7 +770,7 @@ export class DiscordBot {
         "discord.channel.current.id": undefined,
         "discord.channel.current.name": undefined,
       });
-      this.updateSystemPrompt();
+      await this.updateSystemPrompt();
       // 別 VC にメンバーがいれば自動参加する。
       this.scanAndAutoJoin();
     }

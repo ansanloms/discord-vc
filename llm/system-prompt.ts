@@ -22,10 +22,10 @@ const UNRESOLVED_PATTERN = /\{\{[\w.]+\}\}/;
  * @param context - テンプレート変数のコンテキスト。
  * @returns 結合されたシステムプロンプト文字列。全スキップ時は undefined。
  */
-export function resolveSystemPrompt(
+export async function resolveSystemPrompt(
   filePatterns: string[],
   context: Record<string, string>,
-): string | undefined {
+): Promise<string | undefined> {
   const parts: string[] = [];
 
   for (const pattern of filePatterns) {
@@ -37,7 +37,7 @@ export function resolveSystemPrompt(
     }
 
     try {
-      const content = Deno.readTextFileSync(resolvedPath).trim();
+      const content = (await Deno.readTextFile(resolvedPath)).trim();
       if (content.length > 0) {
         parts.push(content);
       }

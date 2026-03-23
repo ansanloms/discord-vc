@@ -11,7 +11,6 @@ import { Ollama } from "ollama";
 import type { Message, Tool } from "ollama";
 import { createLogger } from "../../logger.ts";
 import type { DiscordContext, LanguageModel } from "../types.ts";
-import { replaceTemplateVariables } from "../template.ts";
 import * as listMembers from "./tools/discord-list-members.ts";
 import * as listChannels from "./tools/discord-list-channels.ts";
 import * as sendMessage from "./tools/discord-send-message.ts";
@@ -162,10 +161,7 @@ export class OllamaLlm implements LanguageModel {
     const historyLen = this.history.length - 1;
 
     try {
-      // system prompt はラウンドトリップ間で不変なのでループ外で構築する。
-      const system = this.systemPrompt
-        ? replaceTemplateVariables(this.systemPrompt, this.context)
-        : undefined;
+      const system = this.systemPrompt;
 
       for (let round = 0; round <= this.maxToolRounds; round++) {
         const messages: Message[] = [
@@ -275,13 +271,13 @@ export class OllamaLlm implements LanguageModel {
   /**
    * @inheritdoc
    */
-  /**
-   * @inheritdoc
-   */
   setSystemPrompt(prompt: string | undefined): void {
     this.systemPrompt = prompt;
   }
 
+  /**
+   * @inheritdoc
+   */
   setContext(context: Record<string, string | undefined>): void {
     for (const [key, value] of Object.entries(context)) {
       if (value === undefined) {

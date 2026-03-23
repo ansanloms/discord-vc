@@ -18,7 +18,6 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages";
 import { createLogger } from "../../logger.ts";
 import type { DiscordContext, LanguageModel } from "../types.ts";
-import { replaceTemplateVariables } from "../template.ts";
 import * as webSearch from "./tools/web-search.ts";
 import * as listMembers from "./tools/discord-list-members.ts";
 import * as listChannels from "./tools/discord-list-channels.ts";
@@ -325,13 +324,9 @@ export class ClaudeLlm implements LanguageModel {
     if (!this.systemPrompt) {
       return undefined;
     }
-    const text = replaceTemplateVariables(
-      this.systemPrompt,
-      this.context,
-    );
     return [{
       type: "text",
-      text,
+      text: this.systemPrompt,
       cache_control: { type: "ephemeral" },
     }];
   }
