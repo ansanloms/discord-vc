@@ -204,6 +204,12 @@ export class DiscordBot {
   private autoLeaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
+   * auto-join による joinChannel() が実行中かどうか。
+   * 二重 join を防ぐためのガード。
+   */
+  private isAutoJoining = false;
+
+  /**
    * 発話デバウンス用バッファ。
    * ユーザーごとに STT 結果テキストを溜め、一定時間後にまとめて LLM に投げる。
    */
@@ -358,7 +364,7 @@ export class DiscordBot {
    */
   private tryAutoJoin(newState: VoiceState): void {
     const autoJoin = this.config.autoJoinVc;
-    if (autoJoin === false) {
+    if (autoJoin === false || this.isAutoJoining) {
       return;
     }
 
@@ -384,16 +390,21 @@ export class DiscordBot {
     }
 
     log.info(`auto-joining VC ${channelId}`);
-    this.joinChannel(channelId).catch((e) => log.error("auto-join failed:", e));
+    this.isAutoJoining = true;
+    this.joinChannel(channelId)
+      .catch((e) => log.error("auto-join failed:", e))
+      .finally(() => {
+        this.isAutoJoining = false;
+      });
   }
 
   /**
    * ギルド内の VC をスキャンし、auto-join 条件を満たすチャンネルがあれば参加する。
-   * 起動時に既にメンバーがいるケースを拾うために使う。
+   * 起動時や auto-leave / disconnect 後に呼ばれる。
    */
   private scanAndAutoJoin(): void {
     const autoJoin = this.config.autoJoinVc;
-    if (autoJoin === false || this.currentChannelId) {
+    if (autoJoin === false || this.currentChannelId || this.isAutoJoining) {
       return;
     }
 
@@ -413,11 +424,14 @@ export class DiscordBot {
       const memberCount = channel.members.filter((m) => !m.user.bot).size;
       if (memberCount > 0) {
         log.info(
-          `auto-joining VC ${channel.id} on startup (${memberCount} members)`,
+          `auto-joining VC ${channel.id} (${memberCount} members found by scan)`,
         );
-        this.joinChannel(channel.id).catch((e) =>
-          log.error("auto-join on startup failed:", e)
-        );
+        this.isAutoJoining = true;
+        this.joinChannel(channel.id)
+          .catch((e) => log.error("auto-join (scan) failed:", e))
+          .finally(() => {
+            this.isAutoJoining = false;
+          });
         return; // 最初に見つかった1つだけ。
       }
     }
@@ -732,6 +746,8 @@ export class DiscordBot {
         "discord.channel.current.id": undefined,
         "discord.channel.current.name": undefined,
       });
+      // 別 VC にメンバーがいれば自動参加する。
+      this.scanAndAutoJoin();
     }
   }
 
