@@ -291,7 +291,7 @@ export class ClaudeLlm implements LanguageModel {
    * @inheritdoc
    */
   getContext(): Record<string, string> {
-    return this.context;
+    return { ...this.context };
   }
 
   /**

@@ -360,7 +360,7 @@ export class DiscordBot {
               "discord.channel.current.id": undefined,
               "discord.channel.current.name": undefined,
             });
-            await await this.updateSystemPrompt();
+            await this.updateSystemPrompt();
             // 別 VC にメンバーがいれば自動参加する。
             this.scanAndAutoJoin();
           }

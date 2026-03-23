@@ -91,7 +91,7 @@ export interface Config {
  * SYSTEM_PROMPT_FILE 環境変数をパースしてファイルパスパターンの配列を返す。
  *
  * カンマ区切りで複数指定可能。パスには `{{KEY}}` 形式のテンプレート変数を含められる。
- * 実際のファイル読み込みは LLM 実装側で chat() 呼び出し時に行う。
+ * 実際のファイル読み込みは bot の updateSystemPrompt() で行う。
  */
 function parseSystemPromptFiles(): string[] {
   const raw = Deno.env.get("SYSTEM_PROMPT_FILE") ?? "config/SYSTEM_PROMPT.md";
