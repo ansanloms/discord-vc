@@ -413,10 +413,12 @@ export class DiscordBot {
       return;
     }
 
-    for (const [, channel] of guild.channels.cache) {
-      if (channel.type !== ChannelType.GuildVoice) {
-        continue;
-      }
+    // ギルドのチャンネル表示順（position 昇順）で走査し、最初に見つかった VC に参加する。
+    const voiceChannels = guild.channels.cache
+      .filter((ch) => ch.type === ChannelType.GuildVoice)
+      .sort((a, b) => a.position - b.position);
+
+    for (const [, channel] of voiceChannels) {
       if (Array.isArray(autoJoin) && !autoJoin.includes(channel.id)) {
         continue;
       }
@@ -503,6 +505,7 @@ export class DiscordBot {
             "discord.channel.current.name": undefined,
           });
         }
+        // 手動退出は意図的な操作なので scanAndAutoJoin() は呼ばない。
         await interaction.reply("Left VC");
         return;
       }
