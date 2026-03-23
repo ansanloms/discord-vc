@@ -53,6 +53,12 @@ All commands use the `/aivc` prefix and are registered as guild commands on bot 
 
 Commands that operate on the current voice session (`leave`, `ping`, `message`) must be run from the text chat of the VC the bot is in.
 
+### Auto Join
+
+When `AUTO_JOIN_VC` is enabled, the bot automatically joins a voice channel when a non-bot member is present. Set `AUTO_JOIN_VC=true` for all channels, or provide a comma-separated list of channel IDs to restrict to specific channels (e.g. `AUTO_JOIN_VC=123456789,987654321`). Disabled by default.
+
+The bot also scans existing voice channels on startup, so it will join if someone is already in a channel.
+
 ### Auto Leave
 
 When all members leave the voice channel, the bot will automatically disconnect after a configurable timeout (default: 10 minutes). Set `AUTO_LEAVE_MS=-1` to disable.
@@ -131,12 +137,13 @@ Select backend with `LLM_TYPE` (default: `claude`).
 
 ### Voice Pipeline
 
-| Variable        | Default  | Description                            |
-| --------------- | -------- | -------------------------------------- |
-| `MIN_SPEECH_MS` | `500`    | Min speech duration (ms) sent to STT   |
-| `SPEECH_RMS`    | `200`    | Min RMS amplitude to count as speech   |
-| `INTERRUPT_RMS` | `500`    | Min RMS amplitude to interrupt AI      |
-| `AUTO_LEAVE_MS` | `600000` | Auto-leave timeout (ms). -1 to disable |
+| Variable        | Default  | Description                                                  |
+| --------------- | -------- | ------------------------------------------------------------ |
+| `MIN_SPEECH_MS` | `500`    | Min speech duration (ms) sent to STT                         |
+| `SPEECH_RMS`    | `200`    | Min RMS amplitude to count as speech                         |
+| `INTERRUPT_RMS` | `500`    | Min RMS amplitude to interrupt AI                            |
+| `AUTO_LEAVE_MS` | `600000` | Auto-leave timeout (ms). -1 to disable                       |
+| `AUTO_JOIN_VC`  | `false`  | Auto-join VC: `false` / `true` / comma-separated channel IDs |
 
 ### General
 

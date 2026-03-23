@@ -71,6 +71,14 @@ export interface Config {
    * 未設定時はメッセージをそのまま渡す。
    */
   messageTemplate?: string;
+
+  /**
+   * VC 自動参加設定。
+   * - false: 自動参加しない（デフォルト）。
+   * - true: メンバーがいる任意の VC に自動参加する。
+   * - string[]: 指定されたチャンネル ID の VC のみ自動参加する。
+   */
+  autoJoinVc: boolean | string[];
 }
 
 /**
@@ -139,6 +147,20 @@ export function buildLlmConfig(
 }
 
 /**
+ * AUTO_JOIN_VC 環境変数をパースする。
+ * "false" または未設定 → false、"true" → true、それ以外 → カンマ区切りのチャンネル ID 配列。
+ */
+function parseAutoJoinVc(raw: string | undefined): Config["autoJoinVc"] {
+  if (!raw || raw === "false") {
+    return false;
+  }
+  if (raw === "true") {
+    return true;
+  }
+  return raw.split(",").map((id) => id.trim()).filter((id) => id.length > 0);
+}
+
+/**
  * 環境変数から設定を読み込む。
  * 必須変数が未設定の場合はエラーを出力して終了する。
  */
@@ -185,5 +207,6 @@ export function loadConfig(): Config {
     },
     llm: buildLlmConfig(),
     messageTemplate: Deno.env.get("MESSAGE_TEMPLATE"),
+    autoJoinVc: parseAutoJoinVc(Deno.env.get("AUTO_JOIN_VC")),
   };
 }
